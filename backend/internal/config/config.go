@@ -21,6 +21,9 @@ type Config struct {
 	CSRFSecret    string
 	LogLevel      string
 	AutoMigrate   bool
+
+	InitialAdminEmail    string
+	InitialAdminPassword string
 }
 
 // Load loads configuration from environment variables, optionally reading from an .env file.
@@ -43,6 +46,9 @@ func Load() *Config {
 		CSRFSecret:    getEnv("CSRF_SECRET", "default-insecure-dev-csrf-secret-min-32-bytes"),
 		LogLevel:      getEnv("LOG_LEVEL", "info"),
 		AutoMigrate:   getEnvBool("AUTO_MIGRATE", true),
+
+		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", "admin@vps-billing.local"),
+		InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", "Admin123456!"),
 	}
 
 	return cfg

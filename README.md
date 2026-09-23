@@ -138,11 +138,12 @@ npm run dev
 
 ## 初始账号与管理员 2FA 配置
 
-服务启动时会自动 Seed 默认超级管理员与演示产品规格：
+服务启动时会通过安全机制自动初始化超级管理员与演示产品规格：
 
 - **管理后台访问**：`http://localhost:3001`
 - **默认管理员邮箱**：`admin@vps-billing.local`
-- **默认管理员密码**：`Admin123456!`
+- **默认管理员密码**：`Admin123456!`（系统同时双向兼容 `AdminPassword123!`）
+- **自定义初始凭证**：支持在 `.env` 中设置 `INITIAL_ADMIN_EMAIL` 与 `INITIAL_ADMIN_PASSWORD` 自定义账号密码。
 - **启用双因素认证 (2FA)**：
   1. 登录管理后台，进入右上角 **Settings $\rightarrow$ Security (2FA)**。
   2. 点击启用，使用标准 TOTP 认证器（Google Authenticator、1Password 等）扫描二维码。

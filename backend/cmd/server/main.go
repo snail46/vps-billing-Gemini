@@ -233,8 +233,8 @@ func main() {
 		}
 
 		// Seed default super admin if none exists
-		initAdminEmail := "admin@vps-billing.local"
-		initAdminPass := "AdminPassword123!"
+		initAdminEmail := cfg.InitialAdminEmail
+		initAdminPass := cfg.InitialAdminPassword
 		if admin, err := adminSvc.CreateInitialAdmin(ctx, initAdminEmail, initAdminPass, "Super Admin", domainIdentity.RoleSuperAdmin); err == nil && admin != nil {
 			slog.Info("default super admin initialized", slog.String("email", initAdminEmail))
 		}
