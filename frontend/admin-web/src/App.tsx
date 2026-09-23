@@ -103,6 +103,13 @@ export const App: React.FC = () => {
   const [twoFACode, setTwoFACode] = useState("");
   const [twoFAMsg, setTwoFAMsg] = useState<string | null>(null);
 
+  // Reconcile and Balance Adjustment states
+  const [reconciling, setReconciling] = useState(false);
+  const [selectedUserForAdjust, setSelectedUserForAdjust] = useState<UserDTO | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState<string>("10.00");
+  const [adjustReason, setAdjustReason] = useState<string>("Manual credit adjustment by administrator");
+  const [adjustingBalance, setAdjustingBalance] = useState(false);
+
   const [loadingData, setLoadingData] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -379,6 +386,48 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleTriggerReconcile = async () => {
+    setReconciling(true);
+    setActionNotice(null);
+    setActionError(null);
+    try {
+      await adminApi.triggerReconcile();
+      setActionNotice(t("admin.reconcileSuccess"));
+      await loadTabData();
+    } catch (err: any) {
+      setActionError(err?.message || t("errors.internal_error"));
+    } finally {
+      setReconciling(false);
+    }
+  };
+
+  const handleAdjustBalance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForAdjust) return;
+    const num = parseFloat(adjustAmount);
+    if (isNaN(num)) return;
+    const minorUnits = Math.round(num * 100);
+    setAdjustingBalance(true);
+    setActionNotice(null);
+    setActionError(null);
+    try {
+      await adminApi.adjustUserBalance(
+        selectedUserForAdjust.id,
+        minorUnits,
+        "USD",
+        adjustReason || "Admin manual adjustment"
+      );
+      setActionNotice(t("admin.adjustBalanceSuccess"));
+      setSelectedUserForAdjust(null);
+      setAdjustAmount("10.00");
+      await loadTabData();
+    } catch (err: any) {
+      setActionError(err?.message || t("errors.internal_error"));
+    } finally {
+      setAdjustingBalance(false);
+    }
+  };
+
   const formatPrice = (minor: number, currency: string) => {
     return `${currency} ${(minor / 100).toFixed(2)}`;
   };
@@ -616,7 +665,12 @@ export const App: React.FC = () => {
 
             {/* Health Table */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xs space-y-4">
-              <h3 className="font-bold text-white text-base">{t("common.systemHealth")}</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white text-base">{t("common.systemHealth")}</h3>
+                <Button size="sm" variant="outline" onClick={handleTriggerReconcile} isLoading={reconciling}>
+                  {t("admin.triggerReconcile")}
+                </Button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                 <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
                   <span className="text-zinc-400">{t("common.database")}</span>
@@ -1167,6 +1221,7 @@ export const App: React.FC = () => {
                       <th className="px-5 py-3.5">{t("auth.email")}</th>
                       <th className="px-5 py-3.5">{t("common.status")}</th>
                       <th className="px-5 py-3.5">{t("common.timestamp")}</th>
+                      <th className="px-5 py-3.5 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800">
@@ -1175,6 +1230,11 @@ export const App: React.FC = () => {
                         <td className="px-5 py-4 font-bold text-white">{u.email}</td>
                         <td className="px-5 py-4"><StatusBadge severity="success" label={u.status} /></td>
                         <td className="px-5 py-4 text-zinc-500 font-mono">{new Date(u.created_at).toLocaleString()}</td>
+                        <td className="px-5 py-4 text-right">
+                          <Button size="sm" variant="outline" onClick={() => setSelectedUserForAdjust(u)}>
+                            {t("admin.adjustBalance")}
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1588,6 +1648,63 @@ export const App: React.FC = () => {
                 {t("admin.verifyEnable2fa")}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Adjust User Balance */}
+      {selectedUserForAdjust && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-white">{t("admin.adjustBalance")}</h3>
+            <p className="text-xs text-zinc-400">
+              {selectedUserForAdjust.email} ({selectedUserForAdjust.id})
+            </p>
+
+            <form onSubmit={handleAdjustBalance} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">
+                  {t("admin.adjustmentAmount")}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={adjustAmount}
+                  onChange={(e) => setAdjustAmount(e.target.value)}
+                  placeholder="10.00"
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">
+                  {t("admin.adjustmentReason")}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={adjustReason}
+                  onChange={(e) => setAdjustReason(e.target.value)}
+                  placeholder="Reason for adjustment"
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedUserForAdjust(null)}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" size="sm" isLoading={adjustingBalance}>
+                  {t("common.confirm")}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

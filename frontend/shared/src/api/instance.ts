@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
-import { Instance, InstanceActionResponse } from '../types/instance';
+import { Instance, InstanceActionResponse, TrafficStats, PortForwardRule } from '../types/instance';
 
 export const instanceApi = {
   list: async (): Promise<Instance[]> => {
@@ -54,4 +54,34 @@ export const instanceApi = {
     if (!res.success) throw new Error(res.error?.message_key || 'failed to renew instance');
     return res.data;
   },
+
+  resetPassword: async (id: string, rootPassword?: string): Promise<InstanceActionResponse> => {
+    const res = await apiFetch<InstanceActionResponse>(`/api/v1/instances/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ root_password: rootPassword }),
+    });
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to reset instance password');
+    return res.data;
+  },
+
+  delete: async (id: string): Promise<InstanceActionResponse> => {
+    const res = await apiFetch<InstanceActionResponse>(`/api/v1/instances/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to delete instance');
+    return res.data;
+  },
+
+  getTraffic: async (id: string): Promise<TrafficStats> => {
+    const res = await apiFetch<TrafficStats>(`/api/v1/instances/${id}/traffic`);
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to fetch traffic');
+    return res.data;
+  },
+
+  listPorts: async (id: string): Promise<PortForwardRule[]> => {
+    const res = await apiFetch<{ ports: PortForwardRule[] }>(`/api/v1/instances/${id}/ports`);
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to list ports');
+    return res.data?.ports || [];
+  },
 };
+

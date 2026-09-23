@@ -158,6 +158,23 @@ export const adminApi = {
     return res.data?.disabled ?? true;
   },
 
+  triggerReconcile: async (): Promise<{ status: string; message: string }> => {
+    const res = await apiFetch<{ status: string; message: string }>('/api/v1/admin/reconcile/run', {
+      method: 'POST',
+    });
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to trigger reconcile');
+    return res.data!;
+  },
+
+  adjustUserBalance: async (userId: string, amountMinor: number, currency = 'USD', reason = 'Admin adjustment'): Promise<any> => {
+    const res = await apiFetch<{ wallet: any }>(`/api/v1/admin/users/${userId}/adjust-balance`, {
+      method: 'POST',
+      body: JSON.stringify({ amount_minor: amountMinor, currency, reason }),
+    });
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to adjust balance');
+    return res.data?.wallet;
+  },
+
   checkHealth: async (): Promise<HealthCheckResult> => {
     try {
       let res = await fetch('/api/v1/health/ready').catch(() => null);
@@ -174,3 +191,4 @@ export const adminApi = {
     }
   },
 };
+

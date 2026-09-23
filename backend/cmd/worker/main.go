@@ -37,11 +37,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Connect to PostgreSQL
+	// Connect to PostgreSQL with resilient retry (up to 25 attempts, 2s interval)
 	var dbPool *pgxpool.Pool
-	pool, err := database.Connect(ctx, cfg.DatabaseURL)
+	pool, err := database.ConnectWithRetry(ctx, cfg.DatabaseURL, 25, 2*time.Second)
 	if err != nil {
-		slog.Warn("worker could not connect to postgresql at startup",
+		slog.Error("worker could not connect to postgresql after startup retries",
 			slog.String("error", err.Error()),
 		)
 	} else {
@@ -50,11 +50,11 @@ func main() {
 		slog.Info("worker connected to postgresql")
 	}
 
-	// Connect to Redis
+	// Connect to Redis with resilient retry (up to 25 attempts, 2s interval)
 	var redisClient *redis.Client
-	rClient, err := backendRedis.Connect(ctx, cfg.RedisURL)
+	rClient, err := backendRedis.ConnectWithRetry(ctx, cfg.RedisURL, 25, 2*time.Second)
 	if err != nil {
-		slog.Warn("worker could not connect to redis at startup",
+		slog.Error("worker could not connect to redis after startup retries",
 			slog.String("error", err.Error()),
 		)
 	} else {
@@ -86,6 +86,8 @@ func main() {
 		registry.Register(workflow.NewInstanceLifecycleWorkflow("stop_instance", infraRepo, providersMap, opSvc))
 		registry.Register(workflow.NewInstanceLifecycleWorkflow("restart_instance", infraRepo, providersMap, opSvc))
 		registry.Register(workflow.NewInstanceLifecycleWorkflow("reinstall_instance", infraRepo, providersMap, opSvc))
+		registry.Register(workflow.NewInstanceLifecycleWorkflow("reset_password", infraRepo, providersMap, opSvc))
+		registry.Register(workflow.NewInstanceLifecycleWorkflow("delete_instance", infraRepo, providersMap, opSvc))
 
 		rec := reconciler.NewReconciler(infraRepo, opRepo, opSvc, providersMap, 3*time.Minute, 1*time.Minute)
 		go func() {

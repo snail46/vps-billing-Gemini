@@ -42,3 +42,27 @@ func Ping(ctx context.Context, pool *pgxpool.Pool) error {
 	defer cancel()
 	return pool.Ping(ctx)
 }
+
+func ConnectWithRetry(ctx context.Context, databaseURL string, maxRetries int, retryInterval time.Duration) (*pgxpool.Pool, error) {
+	var pool *pgxpool.Pool
+	var lastErr error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		pool, lastErr = Connect(ctx, databaseURL)
+		if lastErr == nil {
+			return pool, nil
+		}
+
+		if attempt < maxRetries {
+			time.Sleep(retryInterval)
+		}
+	}
+
+	return nil, fmt.Errorf("could not connect to postgresql after %d attempts: %w", maxRetries, lastErr)
+}

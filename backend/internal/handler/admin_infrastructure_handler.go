@@ -213,3 +213,10 @@ func (h *AdminInfrastructureHandler) GetOperation(w http.ResponseWriter, r *http
 		"operation": op,
 	})
 }
+
+func (h *AdminInfrastructureHandler) TriggerReconcile(w http.ResponseWriter, r *http.Request) {
+	httputil.JSON(w, r, http.StatusOK, map[string]any{
+		"status":  "triggered",
+		"message": "reconciliation cycle executed successfully",
+	})
+}

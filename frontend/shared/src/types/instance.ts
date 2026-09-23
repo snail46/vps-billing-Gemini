@@ -27,4 +27,25 @@ export interface Instance {
 export interface InstanceActionResponse {
   operation_id: string;
   operation?: any;
+  root_password?: string;
 }
+
+export interface TrafficStats {
+  instance_id: string;
+  used_bytes: number;
+  limit_bytes?: number;
+  total_bytes?: number;
+  used_gb?: number;
+  limit_gb?: number;
+  bandwidth_mbps?: number | null;
+  reset_date?: string;
+}
+
+export interface PortForwardRule {
+  id: string;
+  protocol: string;
+  public_port: number;
+  guest_port: number;
+  description: string;
+}
+

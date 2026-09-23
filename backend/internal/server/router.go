@@ -224,6 +224,10 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 					r.Post("/instances/{id}/restart", instanceHandler.Restart)
 					r.Post("/instances/{id}/reinstall", instanceHandler.Reinstall)
 					r.Post("/instances/{id}/renew", instanceHandler.Renew)
+					r.Post("/instances/{id}/reset-password", instanceHandler.ResetPassword)
+					r.Delete("/instances/{id}", instanceHandler.Delete)
+					r.Get("/instances/{id}/traffic", instanceHandler.GetTraffic)
+					r.Get("/instances/{id}/ports", instanceHandler.ListPorts)
 				}
 			})
 		}
@@ -257,6 +261,7 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 						r.Get("/orders", adminCommerceHandler.ListOrders)
 						r.Get("/invoices", adminCommerceHandler.ListInvoices)
 						r.Get("/ledger", adminCommerceHandler.ListLedger)
+						r.Post("/users/{id}/adjust-balance", adminCommerceHandler.AdjustUserBalance)
 					}
 
 					if subHandler != nil {
@@ -273,6 +278,7 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 						r.Get("/operations/{id}", adminInfraHandler.GetOperation)
 						r.Get("/users", adminInfraHandler.ListUsers)
 						r.Get("/admins", adminInfraHandler.ListAdmins)
+						r.Post("/reconcile/run", adminInfraHandler.TriggerReconcile)
 					}
 
 					if ticketHandler != nil {
@@ -281,7 +287,6 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 						r.Post("/tickets/{id}/reply", ticketHandler.AdminReplyTicket)
 						r.Post("/tickets/{id}/status", ticketHandler.AdminUpdateTicketStatus)
 					}
-
 				})
 			}
 		})

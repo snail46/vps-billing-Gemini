@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	domainCommerce "vps-billing/internal/domain/commerce"
 	"vps-billing/internal/httputil"
 	serviceCommerce "vps-billing/internal/service/commerce"
@@ -112,5 +114,46 @@ func (h *AdminCommerceHandler) ListLedger(w http.ResponseWriter, r *http.Request
 
 	httputil.JSON(w, r, http.StatusOK, map[string]any{
 		"transactions": txs,
+	})
+}
+
+type AdjustBalanceRequest struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+	Reason      string `json:"reason"`
+}
+
+func (h *AdminCommerceHandler) AdjustUserBalance(w http.ResponseWriter, r *http.Request) {
+	userIdStr := chi.URLParam(r, "id")
+	userID, err := uuid.Parse(userIdStr)
+	if err != nil {
+		httputil.Error(w, r, http.StatusBadRequest, "INVALID_ID", "errors.validation_failed", "invalid user id")
+		return
+	}
+
+	var req AdjustBalanceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.Error(w, r, http.StatusBadRequest, "INVALID_REQUEST", "errors.validation_failed", "invalid body")
+		return
+	}
+
+	if req.AmountMinor <= 0 {
+		req.AmountMinor = 1000
+	}
+	if req.Currency == "" {
+		req.Currency = "USD"
+	}
+	if req.Reason == "" {
+		req.Reason = "Admin manual balance adjustment"
+	}
+
+	wallet, err := h.walletSvc.Deposit(r.Context(), userID, req.AmountMinor, req.Currency)
+	if err != nil {
+		httputil.Error(w, r, http.StatusInternalServerError, "ADJUST_FAILED", "errors.operation_failed", err.Error())
+		return
+	}
+
+	httputil.JSON(w, r, http.StatusOK, map[string]any{
+		"wallet": wallet,
 	})
 }

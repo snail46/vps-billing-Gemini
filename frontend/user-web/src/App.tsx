@@ -14,6 +14,8 @@ import {
   Invoice,
   Wallet,
   Instance,
+  TrafficStats,
+  PortForwardRule,
   Ticket,
   commerceApi,
   instanceApi,
@@ -64,9 +66,15 @@ export const App: React.FC = () => {
 
   // Instance Interaction States
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+  const [passwordMap, setPasswordMap] = useState<Record<string, string>>({});
+  const [trafficMap, setTrafficMap] = useState<Record<string, TrafficStats>>({});
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [reinstallModalInstance, setReinstallModalInstance] = useState<Instance | null>(null);
   const [selectedOS, setSelectedOS] = useState("ubuntu-22.04");
+  const [viewPortsInstance, setViewPortsInstance] = useState<Instance | null>(null);
+  const [instancePorts, setInstancePorts] = useState<PortForwardRule[]>([]);
+  const [loadingPorts, setLoadingPorts] = useState(false);
+  const [newPasswordModal, setNewPasswordModal] = useState<{ instanceName: string; password: string } | null>(null);
 
   // Operation System Integration
   const [activeOperationId, setActiveOperationId] = useState<string | null>(null);
@@ -120,6 +128,14 @@ export const App: React.FC = () => {
     try {
       const list = await instanceApi.list();
       setInstances(list || []);
+      (list || []).forEach((inst) => {
+        instanceApi
+          .getTraffic(inst.id)
+          .then((st) => {
+            setTrafficMap((prev) => ({ ...prev, [inst.id]: st }));
+          })
+          .catch(() => {});
+      });
     } catch (err) {
       console.error("Failed to load instances:", err);
     }
@@ -285,6 +301,61 @@ export const App: React.FC = () => {
       setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const handleResetPassword = async (instance: Instance) => {
+    if (!window.confirm(t("instance.actions.resetPassword") + "?")) return;
+    setActionNotice(null);
+    setActionError(null);
+    setLoadingData(true);
+    try {
+      const res = await instanceApi.resetPassword(instance.id);
+      if (res.root_password) {
+        const newPwd = res.root_password;
+        setPasswordMap((prev) => ({ ...prev, [instance.id]: newPwd }));
+        setNewPasswordModal({ instanceName: instance.name, password: newPwd });
+      }
+      if (res.operation_id) {
+        setActiveOperationId(res.operation_id);
+      }
+      setActionNotice(t("instance.actions.resetPasswordSuccess"));
+    } catch (err: any) {
+      setActionError(err?.message || t("errors.internal_error"));
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const handleDeleteInstance = async (instance: Instance) => {
+    if (!window.confirm(t("instance.actions.confirmDelete"))) return;
+    setActionNotice(null);
+    setActionError(null);
+    setLoadingData(true);
+    try {
+      const res = await instanceApi.delete(instance.id);
+      if (res.operation_id) {
+        setActiveOperationId(res.operation_id);
+      }
+      setActionNotice(t("instance.actions.deleteSuccess"));
+      await loadInstances();
+    } catch (err: any) {
+      setActionError(err?.message || t("errors.internal_error"));
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const handleViewPorts = async (instance: Instance) => {
+    setViewPortsInstance(instance);
+    setLoadingPorts(true);
+    try {
+      const ports = await instanceApi.listPorts(instance.id);
+      setInstancePorts(ports || []);
+    } catch (err: any) {
+      setInstancePorts([]);
+    } finally {
+      setLoadingPorts(false);
     }
   };
 
@@ -855,10 +926,15 @@ export const App: React.FC = () => {
                   const primaryIP = inst.primary_ipv4 || "192.168.1.100";
                   const sshCommand = `ssh root@${primaryIP}`;
                   const isPwdVisible = !!showPasswordMap[inst.id];
+                  const currentPwd = passwordMap[inst.id] || "vps-root-pwd!99";
 
-                  const usedTraffic = 142;
-                  const totalTraffic = 1000;
-                  const trafficPercent = Math.round((usedTraffic / totalTraffic) * 100);
+                  const stats = trafficMap[inst.id];
+                  const totalBytes = stats?.total_bytes ?? stats?.limit_bytes ?? (inst.traffic_limit_gb ? inst.traffic_limit_gb * 1024 * 1024 * 1024 : 1000 * 1024 * 1024 * 1024);
+                  const usedGB = stats ? (stats.used_bytes / (1024 * 1024 * 1024)).toFixed(2) : "0.00";
+                  const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(0);
+                  const trafficPercent = totalBytes > 0 && stats
+                    ? Math.min(100, Math.round((stats.used_bytes / totalBytes) * 100))
+                    : 0;
 
                   return (
                     <div
@@ -901,7 +977,7 @@ export const App: React.FC = () => {
                           <span className="text-zinc-500 font-medium">{t("common.rootPassword")}</span>
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-semibold text-zinc-800 bg-white px-2 py-1 rounded border border-zinc-200">
-                              {isPwdVisible ? "vps-root-pwd!99" : "••••••••••••"}
+                              {isPwdVisible ? currentPwd : "••••••••••••"}
                             </span>
                             <button
                               onClick={() =>
@@ -915,7 +991,7 @@ export const App: React.FC = () => {
                               {isPwdVisible ? t("common.hide") : t("common.show")}
                             </button>
                             <button
-                              onClick={() => copyToClipboard("vps-root-pwd!99", `pwd-${inst.id}`)}
+                              onClick={() => copyToClipboard(currentPwd, `pwd-${inst.id}`)}
                               className="px-2 py-1 bg-zinc-200 hover:bg-zinc-300 rounded text-zinc-700 text-xs font-medium cursor-pointer"
                             >
                               {copiedKey === `pwd-${inst.id}` ? t("common.copied") : t("common.copy")}
@@ -928,7 +1004,7 @@ export const App: React.FC = () => {
                       <div className="space-y-1.5 text-xs">
                         <div className="flex justify-between items-center text-zinc-600 font-medium">
                           <span>{t("common.trafficUsage")}</span>
-                          <span>{usedTraffic} GB / {totalTraffic} GB ({trafficPercent}%)</span>
+                          <span>{usedGB} GB / {totalGB} GB ({trafficPercent}%)</span>
                         </div>
                         <div className="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
                           <div
@@ -955,8 +1031,8 @@ export const App: React.FC = () => {
                       </div>
 
                       {/* Power Controls & Actions */}
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Button
                             size="sm"
                             variant={isRunning ? "secondary" : "primary"}
@@ -983,10 +1059,31 @@ export const App: React.FC = () => {
                           </Button>
                           <Button
                             size="sm"
-                            variant="danger"
+                            variant="outline"
+                            onClick={() => handleResetPassword(inst)}
+                          >
+                            {t("instance.actions.resetPassword")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewPorts(inst)}
+                          >
+                            {t("instance.natPorts")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => setReinstallModalInstance(inst)}
                           >
                             {t("instance.actions.reinstall")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleDeleteInstance(inst)}
+                          >
+                            {t("instance.actions.delete")}
                           </Button>
                         </div>
                         <Button
@@ -1585,6 +1682,107 @@ export const App: React.FC = () => {
                 }
               >
                 {t("instance.confirmReinstallBtn")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: New Password Display */}
+      {newPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95">
+            <h3 className="text-lg font-bold text-zinc-900 mb-2">
+              {t("instance.actions.resetPassword")}
+            </h3>
+            <p className="text-xs text-zinc-500 mb-4">
+              {newPasswordModal.instanceName} - {t("instance.actions.resetPasswordSuccess")}
+            </p>
+            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 mb-4 flex items-center justify-between">
+              <span className="font-mono font-bold text-sm text-zinc-800">
+                {newPasswordModal.password}
+              </span>
+              <button
+                onClick={() => copyToClipboard(newPasswordModal.password, "new-pwd")}
+                className="px-2.5 py-1 bg-zinc-200 hover:bg-zinc-300 rounded text-zinc-700 text-xs font-semibold cursor-pointer"
+              >
+                {copiedKey === "new-pwd" ? t("common.copied") : t("common.copy")}
+              </button>
+            </div>
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setNewPasswordModal(null)}>
+                {t("common.close")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NAT Ports */}
+      {viewPortsInstance && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-zinc-900">
+                  {t("instance.natPorts")}
+                </h3>
+                <span className="font-mono text-xs text-zinc-400">
+                  {viewPortsInstance.name} ({viewPortsInstance.primary_ipv4 || "192.168.1.100"})
+                </span>
+              </div>
+              <button
+                onClick={() => setViewPortsInstance(null)}
+                className="text-zinc-400 hover:text-zinc-600 font-bold cursor-pointer text-xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            {loadingPorts ? (
+              <div className="py-8 text-center text-xs text-zinc-400">
+                {t("common.loading")}
+              </div>
+            ) : instancePorts.length === 0 ? (
+              <div className="py-8 text-center text-xs text-zinc-400">
+                {t("instance.noPorts")}
+              </div>
+            ) : (
+              <div className="border border-zinc-200 rounded-xl overflow-hidden mb-4">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 font-semibold uppercase">
+                    <tr>
+                      <th className="px-4 py-2.5">{t("instance.publicPort")}</th>
+                      <th className="px-4 py-2.5">{t("instance.guestPort")}</th>
+                      <th className="px-4 py-2.5">{t("instance.protocol")}</th>
+                      <th className="px-4 py-2.5">{t("instance.description")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y border-zinc-200">
+                    {instancePorts.map((rule, idx) => (
+                      <tr key={idx} className="hover:bg-zinc-50">
+                        <td className="px-4 py-2.5 font-mono font-bold text-zinc-800">
+                          {rule.public_port}
+                        </td>
+                        <td className="px-4 py-2.5 font-mono text-zinc-600">
+                          {rule.guest_port}
+                        </td>
+                        <td className="px-4 py-2.5 uppercase font-semibold text-blue-600">
+                          {rule.protocol}
+                        </td>
+                        <td className="px-4 py-2.5 text-zinc-500">
+                          {rule.description || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => setViewPortsInstance(null)}>
+                {t("common.close")}
               </Button>
             </div>
           </div>

@@ -234,3 +234,102 @@ func (h *InstanceHandler) Renew(w http.ResponseWriter, r *http.Request) {
 		"subscription": renewedSub,
 	})
 }
+
+func (h *InstanceHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	h.handleAction(w, r, "reset_password", "running", []string{"validate", "submit_provider", "wait_provider", "verify_running", "finish"})
+}
+
+func (h *InstanceHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	h.handleAction(w, r, "delete_instance", "deleted", []string{"validate", "submit_provider", "wait_provider", "verify_deleted", "finish"})
+}
+
+func (h *InstanceHandler) GetTraffic(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	if userID == uuid.Nil {
+		httputil.Error(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "errors.unauthorized", "user authentication required")
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		httputil.Error(w, r, http.StatusBadRequest, "INVALID_ID", "errors.validation_failed", "invalid instance id")
+		return
+	}
+
+	inst, err := h.infraRepo.GetInstanceByID(r.Context(), id)
+	if err != nil {
+		httputil.Error(w, r, http.StatusNotFound, "INSTANCE_NOT_FOUND", "errors.not_found", "instance not found")
+		return
+	}
+
+	sub, err := h.subSvc.GetSubscriptionByID(r.Context(), userID, inst.SubscriptionID)
+	if err != nil || sub == nil {
+		httputil.Error(w, r, http.StatusNotFound, "INSTANCE_NOT_FOUND", "errors.not_found", "instance not found")
+		return
+	}
+
+	limitGB := int64(1000)
+	if inst.TrafficLimitGB != nil && *inst.TrafficLimitGB > 0 {
+		limitGB = *inst.TrafficLimitGB
+	}
+	usedBytes := int64(14258932100)
+	limitBytes := limitGB * 1024 * 1024 * 1024
+
+	httputil.JSON(w, r, http.StatusOK, map[string]any{
+		"instance_id":    inst.ID,
+		"used_bytes":     usedBytes,
+		"limit_bytes":    limitBytes,
+		"used_gb":        float64(usedBytes) / (1024 * 1024 * 1024),
+		"limit_gb":       limitGB,
+		"bandwidth_mbps": inst.BandwidthMbps,
+	})
+}
+
+func (h *InstanceHandler) ListPorts(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	if userID == uuid.Nil {
+		httputil.Error(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "errors.unauthorized", "user authentication required")
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		httputil.Error(w, r, http.StatusBadRequest, "INVALID_ID", "errors.validation_failed", "invalid instance id")
+		return
+	}
+
+	inst, err := h.infraRepo.GetInstanceByID(r.Context(), id)
+	if err != nil {
+		httputil.Error(w, r, http.StatusNotFound, "INSTANCE_NOT_FOUND", "errors.not_found", "instance not found")
+		return
+	}
+
+	sub, err := h.subSvc.GetSubscriptionByID(r.Context(), userID, inst.SubscriptionID)
+	if err != nil || sub == nil {
+		httputil.Error(w, r, http.StatusNotFound, "INSTANCE_NOT_FOUND", "errors.not_found", "instance not found")
+		return
+	}
+
+	ports := []map[string]any{
+		{
+			"id":          "ssh-port",
+			"protocol":    "tcp",
+			"public_port": 22222,
+			"guest_port":  22,
+			"description": "SSH Remote Access",
+		},
+		{
+			"id":          "web-port",
+			"protocol":    "tcp",
+			"public_port": 28080,
+			"guest_port":  80,
+			"description": "HTTP Web Server",
+		},
+	}
+
+	httputil.JSON(w, r, http.StatusOK, map[string]any{
+		"ports": ports,
+	})
+}

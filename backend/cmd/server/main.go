@@ -50,11 +50,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Connect to PostgreSQL
+	// Connect to PostgreSQL with resilient retry (up to 20 attempts, 2s interval)
 	var dbPool *pgxpool.Pool
-	pool, err := database.Connect(ctx, cfg.DatabaseURL)
+	pool, err := database.ConnectWithRetry(ctx, cfg.DatabaseURL, 20, 2*time.Second)
 	if err != nil {
-		slog.Warn("could not connect to postgresql at startup (readiness will report unhealthy)",
+		slog.Error("could not connect to postgresql after startup retries (readiness will report unhealthy)",
 			slog.String("error", err.Error()),
 		)
 	} else {
@@ -69,11 +69,11 @@ func main() {
 		}
 	}
 
-	// Connect to Redis
+	// Connect to Redis with resilient retry (up to 20 attempts, 2s interval)
 	var redisClient *redis.Client
-	rClient, err := backendRedis.Connect(ctx, cfg.RedisURL)
+	rClient, err := backendRedis.ConnectWithRetry(ctx, cfg.RedisURL, 20, 2*time.Second)
 	if err != nil {
-		slog.Warn("could not connect to redis at startup (readiness will report unhealthy)",
+		slog.Error("could not connect to redis after startup retries (readiness will report unhealthy)",
 			slog.String("error", err.Error()),
 		)
 	} else {

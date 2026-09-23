@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,10 +14,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+//go:embed migrations/*.up.sql
+var embeddedMigrations embed.FS
+
 type MigrationFile struct {
 	Version int
 	Name    string
-	Path    string
+	Content string
 }
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
@@ -34,50 +38,84 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		return fmt.Errorf("failed to create schema_migrations table: %w", err)
 	}
 
-	// 2. Locate migrations directory
-	searchDirs := []string{
-		"db/migrations",
-		"../db/migrations",
-		"../../db/migrations",
-		"/app/db/migrations",
-	}
-
-	var migDir string
-	for _, dir := range searchDirs {
-		if info, err := os.Stat(dir); err == nil && info.IsDir() {
-			migDir = dir
-			break
-		}
-	}
-
-	if migDir == "" {
-		slog.Warn("no migration directory found, skipping auto migration")
-		return nil
-	}
-
-	entries, err := os.ReadDir(migDir)
-	if err != nil {
-		return fmt.Errorf("failed to read migrations directory %s: %w", migDir, err)
-	}
-
 	var upFiles []MigrationFile
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".up.sql") {
-			continue
+
+	// 2. Try embedded migrations first (highest reliability across all environments)
+	entries, err := embeddedMigrations.ReadDir("migrations")
+	if err == nil && len(entries) > 0 {
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".up.sql") {
+				continue
+			}
+			parts := strings.SplitN(entry.Name(), "_", 2)
+			if len(parts) < 2 {
+				continue
+			}
+			version, err := strconv.Atoi(parts[0])
+			if err != nil {
+				continue
+			}
+			content, err := embeddedMigrations.ReadFile("migrations/" + entry.Name())
+			if err != nil {
+				continue
+			}
+			upFiles = append(upFiles, MigrationFile{
+				Version: version,
+				Name:    entry.Name(),
+				Content: string(content),
+			})
 		}
-		parts := strings.SplitN(entry.Name(), "_", 2)
-		if len(parts) < 2 {
-			continue
+	}
+
+	// 3. Fallback to filesystem search if embedded was empty
+	if len(upFiles) == 0 {
+		searchDirs := []string{
+			"db/migrations",
+			"../db/migrations",
+			"../../db/migrations",
+			"/app/db/migrations",
 		}
-		version, err := strconv.Atoi(parts[0])
-		if err != nil {
-			continue
+
+		var migDir string
+		for _, dir := range searchDirs {
+			if info, err := os.Stat(dir); err == nil && info.IsDir() {
+				migDir = dir
+				break
+			}
 		}
-		upFiles = append(upFiles, MigrationFile{
-			Version: version,
-			Name:    entry.Name(),
-			Path:    filepath.Join(migDir, entry.Name()),
-		})
+
+		if migDir != "" {
+			fsEntries, err := os.ReadDir(migDir)
+			if err == nil {
+				for _, entry := range fsEntries {
+					if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".up.sql") {
+						continue
+					}
+					parts := strings.SplitN(entry.Name(), "_", 2)
+					if len(parts) < 2 {
+						continue
+					}
+					version, err := strconv.Atoi(parts[0])
+					if err != nil {
+						continue
+					}
+					content, err := os.ReadFile(filepath.Join(migDir, entry.Name()))
+					if err != nil {
+						continue
+					}
+					upFiles = append(upFiles, MigrationFile{
+						Version: version,
+						Name:    entry.Name(),
+						Content: string(content),
+					})
+				}
+			}
+		}
+	}
+
+	if len(upFiles) == 0 {
+		slog.Warn("no migration files found, skipping auto migration")
+		return nil
 	}
 
 	sort.Slice(upFiles, func(i, j int) bool {
@@ -96,17 +134,13 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 
 		slog.Info("applying migration", slog.Int("version", mig.Version), slog.String("name", mig.Name))
-		sqlContent, err := os.ReadFile(mig.Path)
-		if err != nil {
-			return fmt.Errorf("failed to read migration file %s: %w", mig.Path, err)
-		}
 
 		tx, err := pool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to begin transaction for migration %s: %w", mig.Name, err)
 		}
 
-		if _, err := tx.Exec(ctx, string(sqlContent)); err != nil {
+		if _, err := tx.Exec(ctx, mig.Content); err != nil {
 			_ = tx.Rollback(ctx)
 			return fmt.Errorf("failed to execute migration %s: %w", mig.Name, err)
 		}

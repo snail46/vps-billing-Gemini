@@ -34,3 +34,27 @@ func Ping(ctx context.Context, client *redis.Client) error {
 	defer cancel()
 	return client.Ping(ctx).Err()
 }
+
+func ConnectWithRetry(ctx context.Context, redisURL string, maxRetries int, retryInterval time.Duration) (*redis.Client, error) {
+	var client *redis.Client
+	var lastErr error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		client, lastErr = Connect(ctx, redisURL)
+		if lastErr == nil {
+			return client, nil
+		}
+
+		if attempt < maxRetries {
+			time.Sleep(retryInterval)
+		}
+	}
+
+	return nil, fmt.Errorf("could not connect to redis after %d attempts: %w", maxRetries, lastErr)
+}

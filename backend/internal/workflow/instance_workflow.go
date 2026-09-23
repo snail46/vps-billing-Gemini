@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	domainInfrastructure "vps-billing/internal/domain/infrastructure"
 	domainOperation "vps-billing/internal/domain/operation"
 	"vps-billing/internal/provider"
@@ -119,6 +120,19 @@ func (w *InstanceLifecycleWorkflow) Execute(ctx context.Context, op *domainOpera
 			InstanceActionRequest: actionReq,
 			Image:                 "ubuntu-22.04",
 		})
+	case "reset_password":
+		targetState = inst.ObservedState
+		if targetState == "" {
+			targetState = "running"
+		}
+		newPass := fmt.Sprintf("RootPass_%s!", uuid.New().String()[:8])
+		_, err = prov.ResetPassword(ctx, provider.ResetPasswordRequest{
+			InstanceActionRequest: actionReq,
+			RootPassword:          newPass,
+		})
+	case "delete_instance":
+		targetState = "deleted"
+		_, err = prov.DeleteInstance(ctx, actionReq)
 	default:
 		targetState = "running"
 	}
@@ -138,6 +152,8 @@ func (w *InstanceLifecycleWorkflow) Execute(ctx context.Context, op *domainOpera
 	verifyStep := "verify_running"
 	if targetState == "stopped" {
 		verifyStep = "verify_stopped"
+	} else if targetState == "deleted" {
+		verifyStep = "verify_deleted"
 	}
 	_ = w.opSvc.UpdateStep(ctx, op.ID, verifyStep, domainOperation.StepRunning, 80, nil, nil, &step3Start, nil)
 	_ = w.opSvc.UpdateProgress(ctx, op.ID, domainOperation.StatusRunning, verifyStep, fmt.Sprintf("operations.%s.verify", op.Type), 80, nil)
