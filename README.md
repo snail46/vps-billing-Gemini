@@ -23,7 +23,7 @@
 - **后端**：Go 1.23 + Chi + pgx/v5 + sqlc + golang-migrate
 - **数据库与缓存**：PostgreSQL 17 + Redis 8 Alpine
 - **前端**：React 19 + TypeScript 5.7 + Vite + Tailwind CSS + TanStack Query + i18next
-- **容器与部署**：Docker Multi-Stage Build + Docker Compose + Nginx Alpine
+- **容器与部署**：Docker Multi-Stage Build + Docker Compose + 多架构镜像（原生支持 `linux/amd64` 与 `linux/arm64`，适配 x86 服务器、Apple Silicon 及 ARM 云主机）
 - **监控与审计**：Prometheus 指标端点 (`/metrics`) + 不可篡改 Audit Log
 
 ---

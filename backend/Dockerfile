@@ -1,5 +1,7 @@
-# Multi-stage Dockerfile for Go server and worker
-FROM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /src
 
@@ -15,8 +17,8 @@ COPY db/migrations/ ./db/migrations/
 
 # Build server and worker binaries
 WORKDIR /src/backend
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/server ./cmd/server
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/worker ./cmd/worker
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o /app/server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="-s -w" -o /app/worker ./cmd/worker
 
 # Runtime stage
 FROM alpine:3.20
