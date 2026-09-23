@@ -89,6 +89,7 @@
     "confirmReinstallBtn": "确认重装系统",
     "reinstallWarning": "高风险警告：重装系统将彻底格式化磁盘，全部数据不可恢复！",
     "renewNotice": "实例已成功延长一个计费周期",
+    "renewSuccess": "实例已成功延长一个计费周期并更新到期时间！",
     "status": {
       "running": "运行中",
       "stopped": "已停止",

@@ -14,6 +14,7 @@ import (
 	domainInfrastructure "vps-billing/internal/domain/infrastructure"
 	"vps-billing/internal/handler"
 	"vps-billing/internal/middleware"
+	"vps-billing/internal/provider"
 	serviceAudit "vps-billing/internal/service/audit"
 	serviceCommerce "vps-billing/internal/service/commerce"
 	serviceIdentity "vps-billing/internal/service/identity"
@@ -41,6 +42,7 @@ type RouterDeps struct {
 	OperationSvc    *serviceOperation.Service
 	InfraRepo       domainInfrastructure.InfrastructureRepository
 	TicketSvc       *serviceTicket.Service
+	Providers       map[string]provider.Provider
 }
 
 func NewRouterWithDeps(deps RouterDeps) http.Handler {
@@ -56,6 +58,7 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 		deps.Config.AdminWebOrigin,
 		"http://localhost:3000",
 		"http://localhost:3001",
+		"*",
 	}))
 	r.Use(chiMiddleware.RealIP)
 
@@ -220,6 +223,7 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 					r.Post("/instances/{id}/stop", instanceHandler.Stop)
 					r.Post("/instances/{id}/restart", instanceHandler.Restart)
 					r.Post("/instances/{id}/reinstall", instanceHandler.Reinstall)
+					r.Post("/instances/{id}/renew", instanceHandler.Renew)
 				}
 			})
 		}

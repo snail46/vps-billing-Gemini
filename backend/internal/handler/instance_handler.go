@@ -191,3 +191,46 @@ func (h *InstanceHandler) Reinstall(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&req)
 	h.handleAction(w, r, "reinstall_instance", "running", []string{"validate", "lock", "submit_provider", "wait_provider", "sync_network", "verify_running", "finish"})
 }
+
+func (h *InstanceHandler) Renew(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	if userID == uuid.Nil {
+		httputil.Error(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "errors.unauthorized", "user authentication required")
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		httputil.Error(w, r, http.StatusBadRequest, "INVALID_ID", "errors.validation_failed", "invalid instance id")
+		return
+	}
+
+	inst, err := h.infraRepo.GetInstanceByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domainInfrastructure.ErrInstanceNotFound) {
+			httputil.Error(w, r, http.StatusNotFound, "INSTANCE_NOT_FOUND", "errors.not_found", "instance not found")
+			return
+		}
+		httputil.Error(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "errors.internal_error", err.Error())
+		return
+	}
+
+	// Verify ownership via subscription
+	sub, err := h.subSvc.GetSubscriptionByID(r.Context(), userID, inst.SubscriptionID)
+	if err != nil || sub == nil {
+		httputil.Error(w, r, http.StatusNotFound, "INSTANCE_NOT_FOUND", "errors.not_found", "instance not found")
+		return
+	}
+
+	renewedSub, err := h.subSvc.RenewSubscription(r.Context(), inst.SubscriptionID)
+	if err != nil {
+		httputil.Error(w, r, http.StatusBadRequest, "RENEW_FAILED", "errors.operation_failed", err.Error())
+		return
+	}
+
+	httputil.JSON(w, r, http.StatusOK, map[string]any{
+		"instance":     inst,
+		"subscription": renewedSub,
+	})
+}

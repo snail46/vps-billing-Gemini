@@ -46,4 +46,12 @@ export const instanceApi = {
     if (!res.success) throw new Error(res.error?.message_key || 'failed to reinstall instance');
     return res.data;
   },
+
+  renew: async (id: string): Promise<{ instance: Instance; subscription: any }> => {
+    const res = await apiFetch<{ instance: Instance; subscription: any }>(`/api/v1/instances/${id}/renew`, {
+      method: 'POST',
+    });
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to renew instance');
+    return res.data;
+  },
 };

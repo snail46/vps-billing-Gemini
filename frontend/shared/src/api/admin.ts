@@ -160,10 +160,17 @@ export const adminApi = {
 
   checkHealth: async (): Promise<HealthCheckResult> => {
     try {
-      const res = await fetch('/health/ready');
-      return await res.json();
+      let res = await fetch('/api/v1/health/ready').catch(() => null);
+      if (!res || !res.ok) {
+        const fallback = await fetch('/health/ready').catch(() => null);
+        if (fallback) res = fallback;
+      }
+      if (res) {
+        return await res.json();
+      }
+      return { status: 'unhealthy', checks: { database: 'unhealthy', redis: 'unhealthy' } };
     } catch {
-      return { status: 'unhealthy' };
+      return { status: 'unhealthy', checks: { database: 'unhealthy', redis: 'unhealthy' } };
     }
   },
 };

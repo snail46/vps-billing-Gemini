@@ -620,19 +620,57 @@ export const App: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                 <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
                   <span className="text-zinc-400">{t("common.database")}</span>
-                  <StatusBadge severity={health?.checks?.database === "ok" ? "success" : "error"} label={health?.checks?.database === "ok" ? t("common.healthy") : t("common.unhealthy")} />
+                  <StatusBadge
+                    severity={
+                      health?.checks?.database === "healthy" ||
+                      health?.checks?.database === "ok" ||
+                      health?.checks?.postgres === "healthy" ||
+                      health?.checks?.postgres === "ok"
+                        ? "success"
+                        : "error"
+                    }
+                    label={
+                      health?.checks?.database === "healthy" ||
+                      health?.checks?.database === "ok" ||
+                      health?.checks?.postgres === "healthy" ||
+                      health?.checks?.postgres === "ok"
+                        ? t("common.healthy")
+                        : t("common.unhealthy")
+                    }
+                  />
                 </div>
                 <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
                   <span className="text-zinc-400">{t("common.redis")}</span>
-                  <StatusBadge severity={health?.checks?.redis === "ok" ? "success" : "error"} label={health?.checks?.redis === "ok" ? t("common.healthy") : t("common.unhealthy")} />
+                  <StatusBadge
+                    severity={
+                      health?.checks?.redis === "healthy" ||
+                      health?.checks?.redis === "ok" ||
+                      health?.checks?.queue === "healthy"
+                        ? "success"
+                        : "error"
+                    }
+                    label={
+                      health?.checks?.redis === "healthy" ||
+                      health?.checks?.redis === "ok" ||
+                      health?.checks?.queue === "healthy"
+                        ? t("common.healthy")
+                        : t("common.unhealthy")
+                    }
+                  />
                 </div>
                 <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
                   <span className="text-zinc-400">{t("common.apiLive")}</span>
-                  <StatusBadge severity="success" label={t("common.healthy")} />
+                  <StatusBadge
+                    severity={health?.status === "ready" || health?.status === "alive" ? "success" : "warning"}
+                    label={health?.status === "ready" || health?.status === "alive" ? t("common.healthy") : t("common.unhealthy")}
+                  />
                 </div>
                 <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
                   <span className="text-zinc-400">{t("common.apiReady")}</span>
-                  <StatusBadge severity="success" label={t("common.healthy")} />
+                  <StatusBadge
+                    severity={health?.status === "ready" ? "success" : "error"}
+                    label={health?.status === "ready" ? t("common.healthy") : t("common.unhealthy")}
+                  />
                 </div>
               </div>
             </div>

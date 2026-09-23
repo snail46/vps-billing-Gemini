@@ -273,6 +273,21 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleRenewInstance = async (instanceId: string) => {
+    setActionNotice(null);
+    setActionError(null);
+    setLoadingData(true);
+    try {
+      await instanceApi.renew(instanceId);
+      setActionNotice(t("instance.renewSuccess"));
+      await loadInstances();
+    } catch (err: any) {
+      setActionError(err?.message || t("errors.internal_error"));
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   const handleCreateTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTicketSubject.trim() || !newTicketMessage.trim()) return;
@@ -977,9 +992,8 @@ export const App: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            setActionNotice(t("instance.renewNotice"));
-                          }}
+                          onClick={() => handleRenewInstance(inst.id)}
+                          isLoading={loadingData}
                         >
                           {t("common.renew")}
                         </Button>

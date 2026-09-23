@@ -42,25 +42,31 @@ func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	if h.db != nil {
 		if err := database.Ping(r.Context(), h.db); err != nil {
 			checks["postgres"] = "unhealthy: " + err.Error()
+			checks["database"] = "unhealthy: " + err.Error()
 			isReady = false
 		} else {
 			checks["postgres"] = "healthy"
+			checks["database"] = "healthy"
 		}
 	} else {
 		checks["postgres"] = "not_configured"
+		checks["database"] = "not_configured"
 		isReady = false
 	}
 
-	// Check Redis
+	// Check Redis & Queue
 	if h.redis != nil {
 		if err := backendRedis.Ping(r.Context(), h.redis); err != nil {
 			checks["redis"] = "unhealthy: " + err.Error()
+			checks["queue"] = "unhealthy: " + err.Error()
 			isReady = false
 		} else {
 			checks["redis"] = "healthy"
+			checks["queue"] = "healthy"
 		}
 	} else {
 		checks["redis"] = "not_configured"
+		checks["queue"] = "not_configured"
 		isReady = false
 	}
 

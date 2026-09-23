@@ -82,6 +82,11 @@ func main() {
 		provWf := workflow.NewProvisionWorkflow(infraRepo, subRepo, commerceRepo, sched, providersMap, opSvc)
 		registry.Register(provWf)
 
+		registry.Register(workflow.NewInstanceLifecycleWorkflow("start_instance", infraRepo, providersMap, opSvc))
+		registry.Register(workflow.NewInstanceLifecycleWorkflow("stop_instance", infraRepo, providersMap, opSvc))
+		registry.Register(workflow.NewInstanceLifecycleWorkflow("restart_instance", infraRepo, providersMap, opSvc))
+		registry.Register(workflow.NewInstanceLifecycleWorkflow("reinstall_instance", infraRepo, providersMap, opSvc))
+
 		rec := reconciler.NewReconciler(infraRepo, opRepo, opSvc, providersMap, 3*time.Minute, 1*time.Minute)
 		go func() {
 			recTicker := time.NewTicker(30 * time.Second)

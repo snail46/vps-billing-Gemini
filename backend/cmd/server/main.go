@@ -104,6 +104,7 @@ func main() {
 	var opSvc *serviceOperation.Service
 	var infraRepo domainInfrastructure.InfrastructureRepository
 	var ticketSvc *serviceTicket.Service
+	var providersMap map[string]provider.Provider
 
 	if dbPool != nil {
 		queries := repository.New(dbPool)
@@ -136,7 +137,7 @@ func main() {
 		opSvc = serviceOperation.NewService(opRepo, redisClient)
 
 		mockProv := mock.NewMockProvider("mock-default")
-		providersMap := map[string]provider.Provider{
+		providersMap = map[string]provider.Provider{
 			"default": mockProv,
 		}
 		sched := scheduler.NewScheduler(infraRepo)
@@ -261,6 +262,7 @@ func main() {
 		OperationSvc:    opSvc,
 		InfraRepo:       infraRepo,
 		TicketSvc:       ticketSvc,
+		Providers:       providersMap,
 	})
 
 	httpServer := &http.Server{

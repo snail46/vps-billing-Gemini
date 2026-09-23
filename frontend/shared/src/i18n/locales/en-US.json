@@ -89,6 +89,7 @@
     "confirmReinstallBtn": "Confirm OS Reinstall",
     "reinstallWarning": "High Risk Warning: Reinstalling will completely format the disk. All data will be permanently lost!",
     "renewNotice": "Instance renewed for next billing cycle.",
+    "renewSuccess": "Instance has been renewed for one billing cycle successfully!",
     "status": {
       "running": "Running",
       "stopped": "Stopped",
