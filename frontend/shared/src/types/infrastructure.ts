@@ -14,6 +14,7 @@ export interface Provider {
 export interface Node {
   id: string;
   provider_id: string;
+  provider_node_id?: string;
   name: string;
   region: string;
   status: string;

@@ -74,10 +74,22 @@ export const App: React.FC = () => {
   const [nodeRAM, setNodeRAM] = useState(65536);
   const [nodeDisk, setNodeDisk] = useState(2000);
   const [nodeProviderID, setNodeProviderID] = useState("");
+  const [nodeProviderNodeID, setNodeProviderNodeID] = useState("");
 
   const [showCreateProviderModal, setShowCreateProviderModal] = useState(false);
   const [providerName, setProviderName] = useState("");
   const [providerType, setProviderType] = useState("mock");
+  const [providerEndpoint, setProviderEndpoint] = useState("");
+  const [providerToken, setProviderToken] = useState("");
+  const [testingProvider, setTestingProvider] = useState(false);
+  const [providerTestResult, setProviderTestResult] = useState<{
+    success: boolean;
+    latency_ms: number;
+    version?: string;
+    message: string;
+    capabilities?: string[];
+  } | null>(null);
+  const [pingingNodeId, setPingingNodeId] = useState<string | null>(null);
 
   const [showCreateProductModal, setShowCreateProductModal] = useState(false);
   const [productSlug, setProductSlug] = useState("");
@@ -250,9 +262,11 @@ export const App: React.FC = () => {
         memory_total_mb: Number(nodeRAM),
         disk_total_gb: Number(nodeDisk),
         provider_id: nodeProviderID || undefined,
+        provider_node_id: nodeProviderNodeID || undefined,
       });
       setShowCreateNodeModal(false);
       setNodeName("");
+      setNodeProviderNodeID("");
       setActionNotice(t("admin.nodeSuccess"));
       await loadTabData();
     } catch (err: any) {
@@ -269,15 +283,55 @@ export const App: React.FC = () => {
       await adminApi.createProvider({
         name: providerName,
         provider_type: providerType,
+        endpoint: providerEndpoint || undefined,
+        token: providerToken || undefined,
       });
       setShowCreateProviderModal(false);
       setProviderName("");
+      setProviderEndpoint("");
+      setProviderToken("");
+      setProviderTestResult(null);
       setActionNotice(t("admin.provSuccess"));
       await loadTabData();
     } catch (err: any) {
       setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const handleTestProvider = async () => {
+    setTestingProvider(true);
+    setProviderTestResult(null);
+    try {
+      const res = await adminApi.testProvider({
+        provider_type: providerType,
+        endpoint: providerEndpoint,
+        token: providerToken,
+      });
+      setProviderTestResult(res);
+    } catch (err: any) {
+      setProviderTestResult({
+        success: false,
+        latency_ms: 0,
+        message: err?.message || t("errors.internal_error"),
+      });
+    } finally {
+      setTestingProvider(false);
+    }
+  };
+
+  const handlePingNode = async (node: Node) => {
+    setPingingNodeId(node.id);
+    setActionNotice(null);
+    setActionError(null);
+    try {
+      const res = await adminApi.pingNode(node.id);
+      setActionNotice(`${node.name}: ${t("admin.nodePingSuccess")} ${res.latency_ms}ms (${res.message})`);
+    } catch (err: any) {
+      setActionError(err?.message || t("errors.internal_error"));
+    } finally {
+      setPingingNodeId(null);
     }
   };
 
@@ -767,6 +821,7 @@ export const App: React.FC = () => {
                         <th className="px-5 py-3.5">{t("admin.totalCPU")}</th>
                         <th className="px-5 py-3.5">{t("admin.totalRAM")}</th>
                         <th className="px-5 py-3.5">{t("admin.totalDisk")}</th>
+                        <th className="px-5 py-3.5 text-right">{t("common.actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800">
@@ -780,6 +835,16 @@ export const App: React.FC = () => {
                           <td className="px-5 py-4 text-zinc-300">{n.cpu_total} vCPU</td>
                           <td className="px-5 py-4 text-zinc-300">{n.memory_total_mb} MB</td>
                           <td className="px-5 py-4 text-zinc-300">{n.disk_total_gb} GB</td>
+                          <td className="px-5 py-4 text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handlePingNode(n)}
+                              isLoading={pingingNodeId === n.id}
+                            >
+                              {t("admin.pingNode")}
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -798,17 +863,42 @@ export const App: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {providers.map((p) => (
-                    <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs space-y-2">
+                    <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-white text-sm">{p.name}</span>
                         <StatusBadge severity="success" label={p.status} />
                       </div>
-                      <span className="text-xs text-zinc-400 block font-mono">
-                        {t("admin.provType")}: {p.provider_type}
-                      </span>
-                      <span className="text-[11px] text-zinc-500 block font-mono">
-                        ID: {p.id}
-                      </span>
+                      <div className="space-y-1 text-xs">
+                        <span className="text-zinc-400 block font-mono">
+                          {t("admin.provType")}: <span className="text-blue-400 font-semibold">{p.provider_type}</span>
+                        </span>
+                        {p.endpoint && (
+                          <span className="text-zinc-400 block font-mono text-[11px] truncate">
+                            {t("admin.endpoint")}: {p.endpoint}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-zinc-500 block font-mono">
+                          ID: {p.id}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            adminApi.testProvider({
+                              provider_type: p.provider_type,
+                              endpoint: p.endpoint,
+                            }).then((res) => {
+                              setActionNotice(`${p.name}: ${res.message} (${res.latency_ms}ms)`);
+                            }).catch((err) => {
+                              setActionError(`${p.name}: ${err?.message}`);
+                            });
+                          }}
+                        >
+                          {t("admin.testConnection")}
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1356,6 +1446,16 @@ export const App: React.FC = () => {
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.providerNodeId")}</label>
+                <input
+                  type="text"
+                  value={nodeProviderNodeID}
+                  onChange={(e) => setNodeProviderNodeID(e.target.value)}
+                  placeholder={t("admin.providerNodeIdPlaceholder")}
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-zinc-400 mb-1">{t("commerce.cpu")}</label>
@@ -1427,13 +1527,70 @@ export const App: React.FC = () => {
                   <option value="runman">Runman gRPC Agent</option>
                 </select>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateProviderModal(false)}>
-                  {t("common.cancel")}
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.endpoint")}</label>
+                <input
+                  type="text"
+                  value={providerEndpoint}
+                  onChange={(e) => setProviderEndpoint(e.target.value)}
+                  placeholder={t("admin.endpointPlaceholder")}
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.token")}</label>
+                <input
+                  type="password"
+                  value={providerToken}
+                  onChange={(e) => setProviderToken(e.target.value)}
+                  placeholder={t("admin.tokenPlaceholder")}
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {providerTestResult && (
+                <div
+                  className={`p-3 rounded-xl border text-xs space-y-1.5 ${
+                    providerTestResult.success
+                      ? "bg-emerald-950/40 border-emerald-800 text-emerald-300"
+                      : "bg-rose-950/40 border-rose-800 text-rose-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between font-semibold">
+                    <span>{providerTestResult.success ? t("admin.providerTestSuccess") : t("common.error")}</span>
+                    <span>{providerTestResult.latency_ms}ms</span>
+                  </div>
+                  <p className="text-[11px] opacity-90">{providerTestResult.message}</p>
+                  {providerTestResult.capabilities && providerTestResult.capabilities.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {providerTestResult.capabilities.map((cap, i) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded bg-emerald-900/60 text-[10px] text-emerald-200 font-mono">
+                          {cap}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestProvider}
+                  isLoading={testingProvider}
+                >
+                  {t("admin.testConnection")}
                 </Button>
-                <Button type="submit" size="sm" isLoading={loadingData}>
-                  {t("common.confirm")}
-                </Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateProviderModal(false)}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button type="submit" size="sm" isLoading={loadingData}>
+                    {t("common.confirm")}
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

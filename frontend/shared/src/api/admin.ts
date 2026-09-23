@@ -15,12 +15,38 @@ export interface HealthCheckResult {
 export interface CreateProviderInput {
   name: string;
   provider_type: string;
+  endpoint?: string;
+  token?: string;
   status?: string;
+}
+
+export interface TestProviderInput {
+  provider_type: string;
+  endpoint?: string;
+  token?: string;
+}
+
+export interface TestProviderResult {
+  success: boolean;
+  latency_ms: number;
+  version?: string;
+  message: string;
+  capabilities?: string[];
+}
+
+export interface PingNodeResult {
+  online: boolean;
+  latency_ms: number;
+  status: string;
+  message: string;
+  node_id: string;
+  provider?: string;
 }
 
 export interface CreateNodeInput {
   name: string;
   provider_id?: string;
+  provider_node_id?: string;
   region: string;
   cpu_total: number;
   memory_total_mb: number;
@@ -175,15 +201,39 @@ export const adminApi = {
     return res.data?.wallet;
   },
 
+  testProvider: async (input: TestProviderInput): Promise<TestProviderResult> => {
+    const res = await apiFetch<TestProviderResult>('/api/v1/admin/providers/test', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to test provider');
+    return res.data!;
+  },
+
+  pingNode: async (nodeId: string): Promise<PingNodeResult> => {
+    const res = await apiFetch<PingNodeResult>(`/api/v1/admin/nodes/${nodeId}/ping`, {
+      method: 'POST',
+    });
+    if (!res.success) throw new Error(res.error?.message_key || 'failed to ping node');
+    return res.data!;
+  },
+
   checkHealth: async (): Promise<HealthCheckResult> => {
     try {
       let res = await fetch('/api/v1/health/ready').catch(() => null);
-      if (!res || !res.ok) {
-        const fallback = await fetch('/health/ready').catch(() => null);
-        if (fallback) res = fallback;
+      if (!res) {
+        res = await fetch('/health/ready').catch(() => null);
       }
       if (res) {
-        return await res.json();
+        const json = await res.json().catch(() => null);
+        if (json) {
+          const payload = json.data || json;
+          return {
+            status: payload.status || (res.ok ? 'ready' : 'unhealthy'),
+            checks: payload.checks || {},
+            timestamp: payload.timestamp || json.timestamp,
+          };
+        }
       }
       return { status: 'unhealthy', checks: { database: 'unhealthy', redis: 'unhealthy' } };
     } catch {

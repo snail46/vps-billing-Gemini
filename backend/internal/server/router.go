@@ -271,8 +271,10 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 					if adminInfraHandler != nil {
 						r.Get("/providers", adminInfraHandler.ListProviders)
 						r.Post("/providers", adminInfraHandler.CreateProvider)
+						r.Post("/providers/test", adminInfraHandler.TestProvider)
 						r.Get("/nodes", adminInfraHandler.ListNodes)
 						r.Post("/nodes", adminInfraHandler.CreateNode)
+						r.Post("/nodes/{id}/ping", adminInfraHandler.PingNode)
 						r.Get("/instances", adminInfraHandler.ListInstances)
 						r.Get("/operations", adminInfraHandler.ListOperations)
 						r.Get("/operations/{id}", adminInfraHandler.GetOperation)
