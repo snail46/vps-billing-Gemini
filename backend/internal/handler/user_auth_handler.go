@@ -107,6 +107,7 @@ func (h *UserAuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			"locale":   user.Locale,
 			"timezone": user.Timezone,
 		},
+		"token":      sess.Token,
 		"csrf_token": sess.CSRFToken,
 	})
 }

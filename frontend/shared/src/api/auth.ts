@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, setAuthToken, setCSRFToken } from "./client";
 import { ApiResponse } from "../types/api";
 
 export interface UserDTO {
@@ -27,6 +27,7 @@ export interface AuthLoginResponse {
   admin?: AdminDTO;
   roles?: string[];
   permissions?: string[];
+  token?: string;
   csrf_token: string;
 }
 
@@ -68,31 +69,55 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
 
-  loginUser: (data: { email: string; password: string }): Promise<ApiResponse<AuthLoginResponse>> =>
-    apiFetch("/api/v1/auth/login", {
+  loginUser: async (data: { email: string; password: string }): Promise<ApiResponse<AuthLoginResponse>> => {
+    const res = await apiFetch<AuthLoginResponse>("/api/v1/auth/login", {
       method: "POST",
       body: JSON.stringify(data),
-    }),
+    });
+    if (res.success && res.data) {
+      if (res.data.token) setAuthToken(res.data.token);
+      if (res.data.csrf_token) setCSRFToken(res.data.csrf_token);
+    }
+    return res;
+  },
 
-  logoutUser: (): Promise<ApiResponse<{ logged_out: boolean }>> =>
-    apiFetch("/api/v1/auth/logout", {
-      method: "POST",
-    }),
+  logoutUser: async (): Promise<ApiResponse<{ logged_out: boolean }>> => {
+    try {
+      return await apiFetch("/api/v1/auth/logout", {
+        method: "POST",
+      });
+    } finally {
+      setAuthToken(null);
+      setCSRFToken(null);
+    }
+  },
 
   getMeUser: (): Promise<ApiResponse<UserMeResponse>> =>
     apiFetch("/api/v1/auth/me"),
 
   // Admin Auth
-  loginAdmin: (data: { email: string; password: string }): Promise<ApiResponse<AuthLoginResponse>> =>
-    apiFetch("/api/v1/admin/auth/login", {
+  loginAdmin: async (data: { email: string; password: string }): Promise<ApiResponse<AuthLoginResponse>> => {
+    const res = await apiFetch<AuthLoginResponse>("/api/v1/admin/auth/login", {
       method: "POST",
       body: JSON.stringify(data),
-    }),
+    });
+    if (res.success && res.data) {
+      if (res.data.token) setAuthToken(res.data.token);
+      if (res.data.csrf_token) setCSRFToken(res.data.csrf_token);
+    }
+    return res;
+  },
 
-  logoutAdmin: (): Promise<ApiResponse<{ logged_out: boolean }>> =>
-    apiFetch("/api/v1/admin/auth/logout", {
-      method: "POST",
-    }),
+  logoutAdmin: async (): Promise<ApiResponse<{ logged_out: boolean }>> => {
+    try {
+      return await apiFetch("/api/v1/admin/auth/logout", {
+        method: "POST",
+      });
+    } finally {
+      setAuthToken(null);
+      setCSRFToken(null);
+    }
+  },
 
   getMeAdmin: (): Promise<ApiResponse<AdminMeResponse>> =>
     apiFetch("/api/v1/admin/auth/me"),

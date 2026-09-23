@@ -91,7 +91,7 @@ export const App: React.FC = () => {
     setCheckingAuth(true);
     try {
       const res = await authApi.getMeUser();
-      if (res.success && res.data.user) {
+      if (res.success && res.data && res.data.user) {
         setUser(res.data.user);
         setActiveTab("dashboard");
       } else {
@@ -116,6 +116,7 @@ export const App: React.FC = () => {
   };
 
   const loadInstances = async () => {
+    if (!user) return;
     try {
       const list = await instanceApi.list();
       setInstances(list || []);
@@ -125,6 +126,7 @@ export const App: React.FC = () => {
   };
 
   const loadTickets = async () => {
+    if (!user) return;
     try {
       const tList = await ticketApi.listMyTickets();
       setTickets(tList);
@@ -138,6 +140,7 @@ export const App: React.FC = () => {
   };
 
   const loadUserData = async () => {
+    if (!user) return;
     setLoadingData(true);
     try {
       if (activeTab === "dashboard") {
@@ -328,16 +331,30 @@ export const App: React.FC = () => {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
         });
         if (res.success) {
-          setMode("login");
-          setPassword("");
-          setConfirmPassword("");
-          setAuthError(null);
+          const loginRes = await authApi.loginUser({ email, password });
+          if (loginRes.success && loginRes.data && loginRes.data.user) {
+            setUser(loginRes.data.user);
+            setShowAuthModal(false);
+            setPassword("");
+            setConfirmPassword("");
+            if (pendingPlanToOrder) {
+              const planToBuy = pendingPlanToOrder;
+              setPendingPlanToOrder(null);
+              handleOrderPlan(planToBuy);
+            } else {
+              setActiveTab("dashboard");
+            }
+          } else {
+            setMode("login");
+            setPassword("");
+            setConfirmPassword("");
+          }
         } else {
           setAuthError(t(res.error?.message_key || "errors.validation_failed"));
         }
       } else {
         const res = await authApi.loginUser({ email, password });
-        if (res.success && res.data.user) {
+        if (res.success && res.data && res.data.user) {
           setUser(res.data.user);
           setShowAuthModal(false);
           setPassword("");
@@ -352,7 +369,6 @@ export const App: React.FC = () => {
           const errRes = res as any;
           setAuthError(t(errRes.error?.message_key || "errors.invalid_credentials"));
         }
-
       }
     } catch (err: any) {
       setAuthError(err?.message || t("errors.network_error"));
@@ -384,11 +400,13 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 text-zinc-900">
-
       {/* Header */}
       <header className="bg-white border-b border-zinc-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab(user ? "dashboard" : "catalog")}>
+          <div
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => setActiveTab(user ? "dashboard" : "catalog")}
+          >
             <div className="w-9 h-9 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center shadow-xs">
               VPS
             </div>
@@ -397,7 +415,7 @@ export const App: React.FC = () => {
                 {t("common.appNameUser")}
               </span>
               <span className="text-[10px] text-zinc-400 font-mono tracking-wider uppercase block">
-                Cloud IaaS Platform
+                {t("common.platformTagline")}
               </span>
             </div>
           </div>
@@ -415,8 +433,12 @@ export const App: React.FC = () => {
                   className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-700 cursor-pointer hover:bg-blue-100 transition-colors"
                 >
                   <span>{t("commerce.balance")}:</span>
-                  <span className="font-bold">${((wallet?.available_balance_minor || 0) / 100).toFixed(2)}</span>
-                  <span className="ml-1 text-[11px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-normal">+</span>
+                  <span className="font-bold">
+                    ${((wallet?.available_balance_minor || 0) / 100).toFixed(2)}
+                  </span>
+                  <span className="ml-1 text-[11px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-normal">
+                    +
+                  </span>
                 </div>
                 <div className="hidden md:block text-right">
                   <span className="text-xs font-medium text-zinc-700 block truncate max-w-[140px]">
@@ -510,7 +532,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* VIEW 1: Dashboard Overview (Logged-in 5-second metric glance) */}
+        {/* VIEW 1: Dashboard Overview */}
         {user && activeTab === "dashboard" && (
           <div className="space-y-6">
             <div>
@@ -518,7 +540,7 @@ export const App: React.FC = () => {
                 {t("common.dashboard")}
               </h2>
               <p className="text-zinc-500 text-sm mt-0.5">
-                Welcome back, {user.email}
+                {t("common.welcomeBack")}{user.email}
               </p>
             </div>
 
@@ -532,7 +554,7 @@ export const App: React.FC = () => {
                   <span className="text-2xl font-bold text-zinc-900 mt-1 block">
                     {instances.filter((i) => i.observed_state === "running").length} / {instances.length}
                   </span>
-                  <span className="text-[11px] text-zinc-400 mt-0.5 block">Online / Total</span>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block">{t("instance.onlineTotal")}</span>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
                   &#9679;
@@ -568,7 +590,7 @@ export const App: React.FC = () => {
                     {orders.length}
                   </span>
                   <span className="text-[11px] text-zinc-400 mt-0.5 block">
-                    {orders.filter((o) => o.status === "pending").length} Pending
+                    {orders.filter((o) => o.status === "pending").length} {t("order.pendingCount")}
                   </span>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-lg">
@@ -606,7 +628,7 @@ export const App: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-zinc-800 text-base">{t("common.servers")}</h3>
                   <Button size="sm" variant="outline" onClick={() => setActiveTab("instances")}>
-                    View All
+                    {t("common.viewAll")}
                   </Button>
                 </div>
 
@@ -634,7 +656,6 @@ export const App: React.FC = () => {
                             <span className="font-mono text-xs text-zinc-500 block">
                               {inst.primary_ipv4 || "192.168.1.100"} &bull; {inst.image_id || "Ubuntu 22.04 LTS"}
                             </span>
-
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -643,7 +664,7 @@ export const App: React.FC = () => {
                             label={t(`instance.status.${inst.observed_state}`) || inst.observed_state}
                           />
                           <Button size="sm" variant="outline" onClick={() => setActiveTab("instances")}>
-                            Manage
+                            {t("instance.manage")}
                           </Button>
                         </div>
                       </div>
@@ -656,11 +677,11 @@ export const App: React.FC = () => {
               <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-6 flex flex-col justify-between shadow-sm">
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wider text-blue-200 block">
-                    Instant Deployment
+                    {t("commerce.bannerTag")}
                   </span>
-                  <h3 className="text-xl font-bold mt-2">Deploy Cloud VPS in Seconds</h3>
+                  <h3 className="text-xl font-bold mt-2">{t("commerce.bannerTitle")}</h3>
                   <p className="text-sm text-blue-100 mt-2 leading-relaxed">
-                    Choose from NVMe SSD cloud servers with high bandwidth and automated OS provisioning.
+                    {t("commerce.bannerDesc")}
                   </p>
                 </div>
                 <div className="mt-6">
@@ -690,7 +711,7 @@ export const App: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-500 bg-zinc-100 px-3 py-1.5 rounded-full font-medium">
-                  Instant Auto-Provisioning &bull; 99.9% SLA
+                  {t("commerce.slaNotice")}
                 </span>
               </div>
             </div>
@@ -720,7 +741,7 @@ export const App: React.FC = () => {
                                 {plan.name_i18n?.[locale] || Object.values(plan.name_i18n || {})[0] || plan.slug}
                               </h4>
                               <span className="text-xs text-zinc-400 font-mono">
-                                {plan.virtualization.toUpperCase()} KVM VPS
+                                {plan.virtualization.toUpperCase()} KVM
                               </span>
                             </div>
                             <div className="text-right">
@@ -728,7 +749,7 @@ export const App: React.FC = () => {
                                 {formatPrice(plan.price_minor, plan.currency)}
                               </span>
                               <span className="text-[11px] text-zinc-400 block uppercase">
-                                / {plan.billing_cycle}
+                                / {plan.billing_cycle === "monthly" ? t("commerce.perMonth") : plan.billing_cycle}
                               </span>
                             </div>
                           </div>
@@ -742,20 +763,20 @@ export const App: React.FC = () => {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-zinc-500">{t("commerce.memory")}:</span>
-                              <span className="font-semibold text-zinc-800">{plan.memory_mb} MB RAM</span>
+                              <span className="font-semibold text-zinc-800">{plan.memory_mb} MB</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-zinc-500">{t("commerce.disk")}:</span>
-                              <span className="font-semibold text-zinc-800">{plan.disk_gb} GB NVMe SSD</span>
+                              <span className="font-semibold text-zinc-800">{plan.disk_gb} GB</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-zinc-500">{t("commerce.bandwidth")}:</span>
-                              <span className="font-semibold text-zinc-800">{plan.bandwidth_mbps || 100} Mbps Port</span>
+                              <span className="font-semibold text-zinc-800">{plan.bandwidth_mbps || 100} Mbps</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-zinc-500">{t("commerce.traffic")}:</span>
                               <span className="font-semibold text-zinc-800">
-                                {plan.traffic_gb ? `${plan.traffic_gb} GB / Month` : t("commerce.unlimited")}
+                                {plan.traffic_gb ? `${plan.traffic_gb} GB / ${t("commerce.perMonth")}` : t("commerce.unlimited")}
                               </span>
                             </div>
                           </div>
@@ -820,7 +841,6 @@ export const App: React.FC = () => {
                   const sshCommand = `ssh root@${primaryIP}`;
                   const isPwdVisible = !!showPasswordMap[inst.id];
 
-                  // Monthly Traffic Usage: 142 GB / 1000 GB
                   const usedTraffic = 142;
                   const totalTraffic = 1000;
                   const trafficPercent = Math.round((usedTraffic / totalTraffic) * 100);
@@ -838,7 +858,6 @@ export const App: React.FC = () => {
                           <span className="font-mono text-xs text-zinc-400 block mt-0.5">
                             ID: {inst.id} &bull; {inst.image_id || "Ubuntu 22.04 LTS"}
                           </span>
-
                         </div>
                         <StatusBadge
                           severity={isRunning ? "success" : isStopped ? "neutral" : "warning"}
@@ -878,7 +897,7 @@ export const App: React.FC = () => {
                               }
                               className="px-2 py-1 bg-zinc-200 hover:bg-zinc-300 rounded text-zinc-700 text-xs font-medium cursor-pointer"
                             >
-                              {isPwdVisible ? "Hide" : "Show"}
+                              {isPwdVisible ? t("common.hide") : t("common.show")}
                             </button>
                             <button
                               onClick={() => copyToClipboard("vps-root-pwd!99", `pwd-${inst.id}`)}
@@ -907,15 +926,15 @@ export const App: React.FC = () => {
                       {/* Hardware Specs */}
                       <div className="grid grid-cols-3 gap-2 py-3 border-t border-b border-zinc-100 text-center text-xs">
                         <div>
-                          <span className="text-zinc-400 block">CPU</span>
-                          <span className="font-bold text-zinc-800">{inst.cpu_cores} vCPU</span>
+                          <span className="text-zinc-400 block">{t("commerce.cpu")}</span>
+                          <span className="font-bold text-zinc-800">{inst.cpu_cores} {t("commerce.cores")}</span>
                         </div>
                         <div>
-                          <span className="text-zinc-400 block">Memory</span>
+                          <span className="text-zinc-400 block">{t("commerce.memory")}</span>
                           <span className="font-bold text-zinc-800">{inst.memory_mb} MB</span>
                         </div>
                         <div>
-                          <span className="text-zinc-400 block">Disk</span>
+                          <span className="text-zinc-400 block">{t("commerce.disk")}</span>
                           <span className="font-bold text-zinc-800">{inst.disk_gb} GB</span>
                         </div>
                       </div>
@@ -959,7 +978,7 @@ export const App: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setActionNotice("Instance renewed for next billing cycle.");
+                            setActionNotice(t("instance.renewNotice"));
                           }}
                         >
                           {t("common.renew")}
@@ -996,7 +1015,7 @@ export const App: React.FC = () => {
                         <th className="px-5 py-3.5">{t("common.status")}</th>
                         <th className="px-5 py-3.5">{t("commerce.total")}</th>
                         <th className="px-5 py-3.5">{t("common.timestamp")}</th>
-                        <th className="px-5 py-3.5 text-right">Action</th>
+                        <th className="px-5 py-3.5 text-right">{t("common.actions")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
@@ -1058,7 +1077,7 @@ export const App: React.FC = () => {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider font-semibold">
                       <tr>
-                        <th className="px-5 py-3.5">Invoice #</th>
+                        <th className="px-5 py-3.5">{t("commerce.invoiceNo")}</th>
                         <th className="px-5 py-3.5">{t("common.status")}</th>
                         <th className="px-5 py-3.5">{t("commerce.amount")}</th>
                         <th className="px-5 py-3.5">{t("common.timestamp")}</th>
@@ -1073,7 +1092,7 @@ export const App: React.FC = () => {
                           <td className="px-5 py-4">
                             <StatusBadge
                               severity={inv.status === "paid" ? "success" : "warning"}
-                              label={inv.status.toUpperCase()}
+                              label={t(`order.status.${inv.status}`) || inv.status}
                             />
                           </td>
                           <td className="px-5 py-4 font-bold text-zinc-900">
@@ -1101,7 +1120,7 @@ export const App: React.FC = () => {
                   {t("commerce.wallet")}
                 </h2>
                 <p className="text-zinc-500 text-sm mt-0.5">
-                  Prepaid account balance and double-entry immutable financial ledger
+                  {t("commerce.walletDesc")}
                 </p>
               </div>
               <Button size="sm" onClick={() => setShowDepositModal(true)}>
@@ -1119,7 +1138,7 @@ export const App: React.FC = () => {
                   ${((wallet?.available_balance_minor || 0) / 100).toFixed(2)}
                 </span>
                 <span className="text-xs text-zinc-400 mt-1 block">
-                  Currency: {wallet?.currency || "USD"} &bull; Instant deduction upon renewal
+                  {t("commerce.walletRenewalNotice")}
                 </span>
               </div>
               <Button
@@ -1132,11 +1151,11 @@ export const App: React.FC = () => {
 
             {/* User Ledger History */}
             <div className="space-y-4">
-              <h3 className="font-bold text-zinc-800 text-base">Account Ledger Transactions</h3>
+              <h3 className="font-bold text-zinc-800 text-base">{t("commerce.adminLedger")}</h3>
               {userLedger.length === 0 ? (
                 <Card>
                   <div className="text-center py-10 text-zinc-400 text-sm">
-                    No ledger transactions recorded yet.
+                    {t("commerce.noLedger")}
                   </div>
                 </Card>
               ) : (
@@ -1144,9 +1163,9 @@ export const App: React.FC = () => {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider font-semibold">
                       <tr>
-                        <th className="px-5 py-3.5">Direction</th>
+                        <th className="px-5 py-3.5">{t("commerce.direction")}</th>
                         <th className="px-5 py-3.5">{t("commerce.amount")}</th>
-                        <th className="px-5 py-3.5">Transaction ID</th>
+                        <th className="px-5 py-3.5">{t("commerce.txId")}</th>
                         <th className="px-5 py-3.5">{t("common.timestamp")}</th>
                       </tr>
                     </thead>
@@ -1161,7 +1180,7 @@ export const App: React.FC = () => {
                                   : "bg-rose-100 text-rose-800"
                               }`}
                             >
-                              {ent.direction === "credit" ? "+ Credit" : "- Debit"}
+                              {ent.direction === "credit" ? `+ ${t("commerce.credit")}` : `- ${t("commerce.debit")}`}
                             </span>
                           </td>
                           <td className="px-5 py-4 font-bold text-zinc-900">
@@ -1183,7 +1202,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* VIEW 6: Support Tickets (Database Backed) */}
+        {/* VIEW 6: Support Tickets */}
         {user && activeTab === "tickets" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1201,14 +1220,13 @@ export const App: React.FC = () => {
             </div>
 
             {selectedTicket ? (
-              /* Ticket Discussion Thread View */
               <div className="space-y-4">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setSelectedTicket(null)}
                 >
-                  &larr; Back to Tickets List
+                  &larr; {t("tickets.back")}
                 </Button>
 
                 <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-xs space-y-6">
@@ -1218,7 +1236,7 @@ export const App: React.FC = () => {
                         {selectedTicket.subject}
                       </h3>
                       <span className="text-xs text-zinc-400 font-mono">
-                        Ticket ID: {selectedTicket.id} &bull; Created: {new Date(selectedTicket.created_at).toLocaleString()}
+                        {t("tickets.ticketId")}: {selectedTicket.id} &bull; {t("instance.created")}: {new Date(selectedTicket.created_at).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1226,8 +1244,8 @@ export const App: React.FC = () => {
                         severity={selectedTicket.status === "open" ? "warning" : "neutral"}
                         label={t(`tickets.${selectedTicket.status}`) || selectedTicket.status}
                       />
-                      <span className="text-xs font-semibold px-2 py-1 bg-zinc-100 rounded text-zinc-600 uppercase">
-                        {selectedTicket.priority} Priority
+                      <span className="text-xs font-semibold px-2 py-1 bg-zinc-100 rounded text-zinc-600">
+                        {t("tickets.priority")}: {t(`tickets.priority${selectedTicket.priority.charAt(0).toUpperCase() + selectedTicket.priority.slice(1)}`)}
                       </span>
                     </div>
                   </div>
@@ -1243,7 +1261,7 @@ export const App: React.FC = () => {
                         >
                           <div className="flex items-center gap-2 text-xs text-zinc-400 mb-1">
                             <span className="font-semibold text-zinc-700">
-                              {isMe ? "You" : "Technical Support"}
+                              {isMe ? t("tickets.you") : t("tickets.staff")}
                             </span>
                             <span>&bull;</span>
                             <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
@@ -1281,7 +1299,6 @@ export const App: React.FC = () => {
                 </div>
               </div>
             ) : (
-              /* Tickets List Table */
               <div>
                 {tickets.length === 0 ? (
                   <Card>
@@ -1290,7 +1307,7 @@ export const App: React.FC = () => {
                         {t("tickets.noTickets")}
                       </h3>
                       <p className="text-zinc-500 text-sm max-w-sm mx-auto mb-4">
-                        Have questions regarding server setup, PTR records, or firewall ports?
+                        {t("tickets.haveQuestions")}
                       </p>
                       <Button onClick={() => setShowCreateTicketModal(true)}>
                         {t("tickets.createTicket")}
@@ -1306,7 +1323,7 @@ export const App: React.FC = () => {
                           <th className="px-5 py-3.5">{t("tickets.priority")}</th>
                           <th className="px-5 py-3.5">{t("common.status")}</th>
                           <th className="px-5 py-3.5">{t("common.timestamp")}</th>
-                          <th className="px-5 py-3.5 text-right">Action</th>
+                          <th className="px-5 py-3.5 text-right">{t("common.actions")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
@@ -1320,8 +1337,8 @@ export const App: React.FC = () => {
                               {tkt.subject}
                             </td>
                             <td className="px-5 py-4">
-                              <span className="capitalize font-semibold text-zinc-700">
-                                {tkt.priority}
+                              <span className="font-semibold text-zinc-700">
+                                {t(`tickets.priority${tkt.priority.charAt(0).toUpperCase() + tkt.priority.slice(1)}`)}
                               </span>
                             </td>
                             <td className="px-5 py-4">
@@ -1335,7 +1352,7 @@ export const App: React.FC = () => {
                             </td>
                             <td className="px-5 py-4 text-right">
                               <Button size="sm" variant="outline">
-                                View &rarr;
+                                {t("common.view")} &rarr;
                               </Button>
                             </td>
                           </tr>
@@ -1364,7 +1381,7 @@ export const App: React.FC = () => {
               {mode === "login" ? t("auth.userLoginTitle") : t("auth.userRegisterTitle")}
             </h3>
             <p className="text-zinc-500 text-xs mb-4">
-              Secure HttpOnly session with transactional protection
+              {t("auth.sessionProtection")}
             </p>
 
             {authError && (
@@ -1398,7 +1415,7 @@ export const App: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                  placeholder="••••••••"
                 />
               </div>
 
@@ -1413,7 +1430,7 @@ export const App: React.FC = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                    placeholder="••••••••"
                   />
                 </div>
               )}
@@ -1453,7 +1470,7 @@ export const App: React.FC = () => {
               {t("commerce.depositTitle")}
             </h3>
             <p className="text-zinc-500 text-xs mb-5">
-              Instant double-entry credited funds via test payment gateway
+              {t("commerce.depositSubtitle")}
             </p>
 
             <div className="grid grid-cols-4 gap-2 mb-4">
@@ -1478,13 +1495,13 @@ export const App: React.FC = () => {
 
             <div className="mb-5">
               <label className="block text-xs font-medium text-zinc-700 mb-1">
-                Custom Amount ($)
+                {t("commerce.customAmount")}
               </label>
               <input
                 type="number"
                 min="1"
                 step="1"
-                placeholder="Or enter custom amount..."
+                placeholder={t("commerce.enterAmount")}
                 value={customDeposit}
                 onChange={(e) => setCustomDeposit(e.target.value)}
                 className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1496,7 +1513,7 @@ export const App: React.FC = () => {
               onClick={handleDeposit}
               isLoading={depositing}
             >
-              Deposit ${(customDeposit ? parseFloat(customDeposit) || 0 : depositAmount).toFixed(2)} USD
+              {t("commerce.confirmDeposit")} ${(customDeposit ? parseFloat(customDeposit) || 0 : depositAmount).toFixed(2)}
             </Button>
           </div>
         </div>
@@ -1510,7 +1527,7 @@ export const App: React.FC = () => {
               {t("instance.actions.reinstall")}
             </h3>
             <p className="text-xs text-rose-600 font-medium mb-4">
-              {t("instance.actions.confirmReinstall")}
+              {t("instance.reinstallWarning")}
             </p>
 
             <div className="space-y-2 mb-6">
@@ -1544,7 +1561,7 @@ export const App: React.FC = () => {
                 size="sm"
                 onClick={() => setReinstallModalInstance(null)}
               >
-                {t("instance.actions.cancel")}
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="danger"
@@ -1553,7 +1570,7 @@ export const App: React.FC = () => {
                   handleInstanceAction(reinstallModalInstance.id, "reinstall", selectedOS)
                 }
               >
-                {t("instance.actions.confirm")}
+                {t("instance.confirmReinstallBtn")}
               </Button>
             </div>
           </div>
@@ -1574,7 +1591,7 @@ export const App: React.FC = () => {
               {t("tickets.createTicket")}
             </h3>
             <p className="text-zinc-500 text-xs mb-4">
-              Submit your inquiry to our engineering team
+              {t("tickets.submitInquiry")}
             </p>
 
             <form onSubmit={handleCreateTicketSubmit} className="space-y-4">
@@ -1587,7 +1604,7 @@ export const App: React.FC = () => {
                   required
                   value={newTicketSubject}
                   onChange={(e) => setNewTicketSubject(e.target.value)}
-                  placeholder="e.g. Reverse DNS setup request"
+                  placeholder={t("tickets.subjectPlaceholder")}
                   className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1601,9 +1618,9 @@ export const App: React.FC = () => {
                   onChange={(e) => setNewTicketPriority(e.target.value as any)}
                   className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  <option value="low">{t("tickets.priorityLow")}</option>
+                  <option value="medium">{t("tickets.priorityMedium")}</option>
+                  <option value="high">{t("tickets.priorityHigh")}</option>
                 </select>
               </div>
 
@@ -1616,7 +1633,7 @@ export const App: React.FC = () => {
                   rows={4}
                   value={newTicketMessage}
                   onChange={(e) => setNewTicketMessage(e.target.value)}
-                  placeholder="Describe your issue or request in detail..."
+                  placeholder={t("tickets.messagePlaceholder")}
                   className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1628,7 +1645,7 @@ export const App: React.FC = () => {
                   size="sm"
                   onClick={() => setShowCreateTicketModal(false)}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" size="sm" isLoading={loadingData}>
                   {t("tickets.submit")}
@@ -1643,11 +1660,11 @@ export const App: React.FC = () => {
       <footer className="bg-white border-t border-zinc-200 mt-auto py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-400 gap-3">
           <div>
-            &copy; {new Date().getFullYear()} VPS Billing Agent Pack. High Reliability Cloud Computing.
+            &copy; {new Date().getFullYear()} {t("common.appNameUser")}. {t("common.footerCopyright")}.
           </div>
           <div className="flex items-center gap-4">
-            <span>Status: Healthy</span>
-            <span>SSE Operations Engine: Enabled</span>
+            <span>{t("common.serviceStatus")}: {t("common.healthy")}</span>
+            <span>{t("common.sseEnabled")}</span>
           </div>
         </div>
       </footer>
@@ -1656,4 +1673,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

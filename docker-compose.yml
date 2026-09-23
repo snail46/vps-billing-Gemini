@@ -48,6 +48,7 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:-change-me-long-random}
       CSRF_SECRET: ${CSRF_SECRET:-change-me-long-random}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       AUTO_MIGRATE: "true"
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@vps-billing.local}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-Admin123456!}

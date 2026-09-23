@@ -90,7 +90,7 @@ func main() {
 		slog.Warn("using in-memory session store (sessions will not persist across restarts)")
 		sessionStore = session.NewMemorySessionStore()
 	}
-	sessMgr := session.NewManager(sessionStore, cfg.AppEnv == "production")
+	sessMgr := session.NewManager(sessionStore, cfg.CookieSecure)
 
 	// Repositories & Services
 	var userSvc *serviceIdentity.UserService

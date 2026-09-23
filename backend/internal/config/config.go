@@ -24,6 +24,8 @@ type Config struct {
 
 	InitialAdminEmail    string
 	InitialAdminPassword string
+
+	CookieSecure bool
 }
 
 // Load loads configuration from environment variables, optionally reading from an .env file.
@@ -49,6 +51,8 @@ func Load() *Config {
 
 		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", "admin@vps-billing.local"),
 		InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", "Admin123456!"),
+
+		CookieSecure: getEnvBool("COOKIE_SECURE", false),
 	}
 
 	return cfg

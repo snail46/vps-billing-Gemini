@@ -77,7 +77,7 @@ export const App: React.FC = () => {
 
   const [showCreateProviderModal, setShowCreateProviderModal] = useState(false);
   const [providerName, setProviderName] = useState("");
-  const [providerType, setProviderType] = useState("lxd");
+  const [providerType, setProviderType] = useState("mock");
 
   const [showCreateProductModal, setShowCreateProductModal] = useState(false);
   const [productSlug, setProductSlug] = useState("");
@@ -121,7 +121,7 @@ export const App: React.FC = () => {
     setCheckingAuth(true);
     try {
       const res = await authApi.getMeAdmin();
-      if (res.success && res.data.admin) {
+      if (res.success && res.data && res.data.admin) {
         setAdmin(res.data.admin);
       } else {
         setAdmin(null);
@@ -134,6 +134,7 @@ export const App: React.FC = () => {
   };
 
   const loadTabData = async () => {
+    if (!admin) return;
     setLoadingData(true);
     try {
       if (activeTab === "dashboard") {
@@ -209,7 +210,7 @@ export const App: React.FC = () => {
     setSubmitting(true);
     try {
       const res = await authApi.loginAdmin({ email, password });
-      if (res.success && res.data.admin) {
+      if (res.success && res.data && res.data.admin) {
         setAdmin(res.data.admin);
         setPassword("");
       } else {
@@ -245,10 +246,10 @@ export const App: React.FC = () => {
       });
       setShowCreateNodeModal(false);
       setNodeName("");
-      setActionNotice("Node provisioned successfully.");
+      setActionNotice(t("admin.nodeSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || "Failed to create node");
+      setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
     }
@@ -264,10 +265,10 @@ export const App: React.FC = () => {
       });
       setShowCreateProviderModal(false);
       setProviderName("");
-      setActionNotice("Infrastructure Provider connected.");
+      setActionNotice(t("admin.provSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || "Failed to create provider");
+      setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
     }
@@ -285,10 +286,10 @@ export const App: React.FC = () => {
       setProductSlug("");
       setProductNameEn("");
       setProductNameZh("");
-      setActionNotice("Product created successfully.");
+      setActionNotice(t("admin.productSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || "Failed to create product");
+      setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
     }
@@ -313,10 +314,10 @@ export const App: React.FC = () => {
       setPlanSlug("");
       setPlanNameEn("");
       setPlanNameZh("");
-      setActionNotice("Plan created and published.");
+      setActionNotice(t("admin.planSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || "Failed to create plan");
+      setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
     }
@@ -333,7 +334,7 @@ export const App: React.FC = () => {
       setSelectedTicket(fresh);
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || "Failed to reply");
+      setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
     }
@@ -349,7 +350,7 @@ export const App: React.FC = () => {
       setSelectedTicket(fresh);
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || "Failed to update ticket status");
+      setActionError(err?.message || t("errors.internal_error"));
     } finally {
       setLoadingData(false);
     }
@@ -363,7 +364,7 @@ export const App: React.FC = () => {
       setTwoFASecret(res.secret);
       setTwoFAUrl(res.otpauth_url);
     } catch (err: any) {
-      setTwoFAMsg(err?.message || "Failed to init 2FA");
+      setTwoFAMsg(err?.message || t("errors.internal_error"));
     }
   };
 
@@ -371,10 +372,10 @@ export const App: React.FC = () => {
     if (!twoFASecret || !twoFACode) return;
     try {
       await adminApi.enable2FA(twoFASecret, twoFACode);
-      setTwoFAMsg("2FA successfully enabled!");
+      setTwoFAMsg(t("admin.twofaSuccess"));
       setTwoFACode("");
     } catch (err: any) {
-      setTwoFAMsg(err?.message || "Invalid verification code");
+      setTwoFAMsg(t("admin.twofaInvalidCode"));
     }
   };
 
@@ -407,7 +408,7 @@ export const App: React.FC = () => {
               {t("common.appNameAdmin")}
             </h1>
             <p className="text-xs text-zinc-400">
-              Privileged infrastructure and billing control plane
+              {t("admin.loginDesc")}
             </p>
           </div>
 
@@ -444,7 +445,7 @@ export const App: React.FC = () => {
               </div>
 
               <div className="p-3 bg-zinc-950/80 rounded-lg border border-zinc-800 text-[11px] text-zinc-400 space-y-0.5">
-                <span className="font-semibold text-zinc-300 block">Default Credentials:</span>
+                <span className="font-semibold text-zinc-300 block">{t("admin.defaultCreds")}</span>
                 <span>admin@vps-billing.local &bull; Admin123456!</span>
               </div>
 
@@ -472,7 +473,7 @@ export const App: React.FC = () => {
                 {t("common.appNameAdmin")}
               </span>
               <span className="text-[10px] text-zinc-400 font-mono tracking-wider uppercase block">
-                Control Plane &bull; Super Admin
+                {t("admin.controlPlaneTag")}
               </span>
             </div>
           </div>
@@ -504,9 +505,9 @@ export const App: React.FC = () => {
           <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 overflow-x-auto py-2">
             {[
               { id: "dashboard", label: t("common.dashboard") },
-              { id: "infrastructure", label: "Infrastructure" },
+              { id: "infrastructure", label: t("admin.infraTitle") },
               { id: "instances", label: t("common.servers") },
-              { id: "commerce", label: "Commerce & Billing" },
+              { id: "commerce", label: t("common.billing") },
               { id: "operations", label: t("common.operations") },
               { id: "tickets", label: t("common.tickets") },
               { id: "users", label: t("common.users") },
@@ -548,8 +549,8 @@ export const App: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">System Telemetry & Status</h2>
-                <p className="text-xs text-zinc-400 mt-0.5">Real-time health of cluster nodes and microservices</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">{t("admin.telemetryTitle")}</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">{t("admin.telemetrySubtitle")}</p>
               </div>
               <Button size="sm" variant="outline" onClick={loadTabData} isLoading={loadingData}>
                 {t("common.refresh")}
@@ -560,11 +561,11 @@ export const App: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Nodes Online</span>
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">{t("admin.nodesOnline")}</span>
                   <span className="text-2xl font-bold text-white mt-1 block">
                     {nodes.filter((n) => n.status === "active").length} / {nodes.length}
                   </span>
-                  <span className="text-[11px] text-emerald-400 mt-0.5 block">100% Operational</span>
+                  <span className="text-[11px] text-emerald-400 mt-0.5 block">{t("admin.allOperational")}</span>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold text-lg">
                   &#9679;
@@ -573,11 +574,11 @@ export const App: React.FC = () => {
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Live Instances</span>
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">{t("admin.liveInstances")}</span>
                   <span className="text-2xl font-bold text-blue-400 mt-1 block">
                     {instances.filter((i) => i.observed_state === "running").length}
                   </span>
-                  <span className="text-[11px] text-zinc-400 mt-0.5 block">{instances.length} Provisioned</span>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block">{instances.length} {t("admin.provisioned")}</span>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-blue-950 text-blue-400 flex items-center justify-center font-bold text-lg">
                   &bull;
@@ -586,12 +587,12 @@ export const App: React.FC = () => {
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Total Orders</span>
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">{t("admin.totalOrders")}</span>
                   <span className="text-2xl font-bold text-purple-400 mt-1 block">
                     {orders.length}
                   </span>
                   <span className="text-[11px] text-zinc-400 mt-0.5 block">
-                    {orders.filter((o) => o.status === "paid").length} Settled
+                    {orders.filter((o) => o.status === "paid").length} {t("admin.settled")}
                   </span>
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-purple-950 text-purple-400 flex items-center justify-center font-bold text-lg">
@@ -601,157 +602,125 @@ export const App: React.FC = () => {
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">Platform Health</span>
-                  <span className="text-2xl font-bold text-emerald-400 mt-1 block">
-                    {health?.status ? health.status.toUpperCase() : "READY"}
+                  <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">{t("common.tickets")}</span>
+                  <span className="text-2xl font-bold text-amber-400 mt-1 block">
+                    {tickets.filter((t) => t.status === "open").length}
                   </span>
-                  <span className="text-[11px] text-zinc-400 mt-0.5 block">Postgres + Redis</span>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block">{t("tickets.open")}</span>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-emerald-950 text-emerald-400 flex items-center justify-center font-bold text-lg">
-                  &#10003;
+                <div className="w-10 h-10 rounded-lg bg-amber-950 text-amber-400 flex items-center justify-center font-bold text-lg">
+                  ?
                 </div>
               </div>
             </div>
 
-            {/* Quick Links & Cluster Nodes */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-white text-base">Compute Nodes</h3>
-                  <Button size="sm" onClick={() => setShowCreateNodeModal(true)}>
-                    + {t("common.createNode")}
-                  </Button>
+            {/* Health Table */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xs space-y-4">
+              <h3 className="font-bold text-white text-base">{t("common.systemHealth")}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
+                  <span className="text-zinc-400">{t("common.database")}</span>
+                  <StatusBadge severity={health?.checks?.database === "ok" ? "success" : "error"} label={health?.checks?.database === "ok" ? t("common.healthy") : t("common.unhealthy")} />
                 </div>
-                {nodes.length === 0 ? (
-                  <div className="text-center py-8 text-zinc-500 text-xs">No active nodes registered</div>
-                ) : (
-                  <div className="space-y-2">
-                    {nodes.map((n) => (
-                      <div
-                        key={n.id}
-                        className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-white block">{n.name}</span>
-                          <span className="text-zinc-500 font-mono">{n.region} &bull; {n.cpu_total} Cores &bull; {n.memory_total_mb} MB</span>
-                        </div>
-                        <StatusBadge severity={n.status === "active" ? "success" : "neutral"} label={n.status} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-white text-base">Infrastructure Providers</h3>
-                  <Button size="sm" onClick={() => setShowCreateProviderModal(true)}>
-                    + {t("common.createProvider")}
-                  </Button>
+                <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
+                  <span className="text-zinc-400">{t("common.redis")}</span>
+                  <StatusBadge severity={health?.checks?.redis === "ok" ? "success" : "error"} label={health?.checks?.redis === "ok" ? t("common.healthy") : t("common.unhealthy")} />
                 </div>
-                {providers.length === 0 ? (
-                  <div className="text-center py-8 text-zinc-500 text-xs">No providers attached</div>
-                ) : (
-                  <div className="space-y-2">
-                    {providers.map((p) => (
-                      <div
-                        key={p.id}
-                        className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-white block">{p.name}</span>
-                          <span className="text-zinc-500 uppercase font-mono">{p.provider_type} Driver</span>
-                        </div>
-                        <StatusBadge severity="success" label={p.status} />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
+                  <span className="text-zinc-400">{t("common.apiLive")}</span>
+                  <StatusBadge severity="success" label={t("common.healthy")} />
+                </div>
+                <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-between">
+                  <span className="text-zinc-400">{t("common.apiReady")}</span>
+                  <StatusBadge severity="success" label={t("common.healthy")} />
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 2: Infrastructure Management (Nodes & Providers) */}
+        {/* TAB 2: Infrastructure Management */}
         {activeTab === "infrastructure" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">Infrastructure Topology</h2>
-                <p className="text-xs text-zinc-400 mt-0.5">Physical hypervisors, cloud endpoints, and capability drivers</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">{t("admin.infraTitle")}</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">{t("admin.infraSubtitle")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button size="sm" onClick={() => setShowCreateNodeModal(true)}>
-                  + {t("common.createNode")}
+                  + {t("admin.addNode")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setShowCreateProviderModal(true)}>
-                  + {t("common.createProvider")}
+                  + {t("admin.addProvider")}
                 </Button>
               </div>
             </div>
 
-            {/* Nodes Table */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
-              <div className="px-5 py-3.5 border-b border-zinc-800 font-bold text-sm text-white">
-                Hypervisor Nodes
-              </div>
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
-                  <tr>
-                    <th className="px-5 py-3.5">Node Name</th>
-                    <th className="px-5 py-3.5">Region</th>
-                    <th className="px-5 py-3.5">CPU Capacity</th>
-                    <th className="px-5 py-3.5">Memory Capacity</th>
-                    <th className="px-5 py-3.5">Disk Capacity</th>
-                    <th className="px-5 py-3.5">{t("common.status")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/80">
-                  {nodes.map((node) => (
-                    <tr key={node.id} className="hover:bg-zinc-800/40 transition-colors">
-                      <td className="px-5 py-4 font-mono font-medium text-white">{node.name}</td>
-                      <td className="px-5 py-4 text-zinc-400 font-mono uppercase">{node.region}</td>
-                      <td className="px-5 py-4 text-zinc-300 font-semibold">{node.cpu_total} Cores</td>
-                      <td className="px-5 py-4 text-zinc-300 font-semibold">{(node.memory_total_mb / 1024).toFixed(0)} GB</td>
-                      <td className="px-5 py-4 text-zinc-300 font-semibold">{node.disk_total_gb} GB</td>
-                      <td className="px-5 py-4">
-                        <StatusBadge severity={node.status === "active" ? "success" : "neutral"} label={node.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Nodes List */}
+            <div className="space-y-4">
+              <h3 className="font-bold text-white text-base">{t("admin.nodesTab")}</h3>
+              {nodes.length === 0 ? (
+                <Card>
+                  <div className="text-center py-10 text-zinc-500 text-sm">{t("common.empty")}</div>
+                </Card>
+              ) : (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
+                      <tr>
+                        <th className="px-5 py-3.5">{t("admin.nodeName")}</th>
+                        <th className="px-5 py-3.5">{t("admin.region")}</th>
+                        <th className="px-5 py-3.5">{t("common.status")}</th>
+                        <th className="px-5 py-3.5">{t("admin.totalCPU")}</th>
+                        <th className="px-5 py-3.5">{t("admin.totalRAM")}</th>
+                        <th className="px-5 py-3.5">{t("admin.totalDisk")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800">
+                      {nodes.map((n) => (
+                        <tr key={n.id} className="hover:bg-zinc-800/50 transition-colors">
+                          <td className="px-5 py-4 font-bold text-white">{n.name}</td>
+                          <td className="px-5 py-4 font-mono text-zinc-400">{n.region}</td>
+                          <td className="px-5 py-4">
+                            <StatusBadge severity={n.status === "active" ? "success" : "error"} label={n.status} />
+                          </td>
+                          <td className="px-5 py-4 text-zinc-300">{n.cpu_total} vCPU</td>
+                          <td className="px-5 py-4 text-zinc-300">{n.memory_total_mb} MB</td>
+                          <td className="px-5 py-4 text-zinc-300">{n.disk_total_gb} GB</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
-            {/* Providers Table */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
-              <div className="px-5 py-3.5 border-b border-zinc-800 font-bold text-sm text-white">
-                Cloud Provider Drivers
-              </div>
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
-                  <tr>
-                    <th className="px-5 py-3.5">Provider Name</th>
-                    <th className="px-5 py-3.5">Driver Type</th>
-                    <th className="px-5 py-3.5">{t("common.status")}</th>
-                    <th className="px-5 py-3.5">Capabilities</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/80">
+            {/* Providers List */}
+            <div className="space-y-4 pt-4">
+              <h3 className="font-bold text-white text-base">{t("admin.providersTab")}</h3>
+              {providers.length === 0 ? (
+                <Card>
+                  <div className="text-center py-10 text-zinc-500 text-sm">{t("common.empty")}</div>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {providers.map((p) => (
-                    <tr key={p.id} className="hover:bg-zinc-800/40 transition-colors">
-                      <td className="px-5 py-4 font-bold text-white">{p.name}</td>
-                      <td className="px-5 py-4 font-mono text-blue-400 uppercase">{p.provider_type}</td>
-                      <td className="px-5 py-4">
+                    <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-sm">{p.name}</span>
                         <StatusBadge severity="success" label={p.status} />
-                      </td>
-                      <td className="px-5 py-4 text-zinc-400 font-mono text-[11px]">
-                        create, start, stop, restart, reinstall
-                      </td>
-                    </tr>
+                      </div>
+                      <span className="text-xs text-zinc-400 block font-mono">
+                        {t("admin.provType")}: {p.provider_type}
+                      </span>
+                      <span className="text-[11px] text-zinc-500 block font-mono">
+                        ID: {p.id}
+                      </span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -762,7 +731,7 @@ export const App: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-white tracking-tight">{t("common.servers")}</h2>
-                <p className="text-xs text-zinc-400 mt-0.5">All customer virtual servers across hypervisors</p>
+                <p className="text-xs text-zinc-400 mt-0.5">{t("instance.subtitle")}</p>
               </div>
               <Button size="sm" variant="outline" onClick={loadTabData} isLoading={loadingData}>
                 {t("common.refresh")}
@@ -771,41 +740,36 @@ export const App: React.FC = () => {
 
             {instances.length === 0 ? (
               <Card>
-                <div className="text-center py-12 text-zinc-500 text-sm">No instances deployed yet</div>
+                <div className="text-center py-12 text-zinc-500 text-sm">{t("instance.noInstances")}</div>
               </Card>
             ) : (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
                     <tr>
-                      <th className="px-5 py-3.5">Instance Name</th>
-                      <th className="px-5 py-3.5">IP Address</th>
-                      <th className="px-5 py-3.5">Specs</th>
+                      <th className="px-5 py-3.5">{t("instance.title")}</th>
+                      <th className="px-5 py-3.5">{t("instance.ipv4")}</th>
                       <th className="px-5 py-3.5">{t("common.status")}</th>
-                      <th className="px-5 py-3.5">{t("common.timestamp")}</th>
+                      <th className="px-5 py-3.5">{t("instance.specs")}</th>
+                      <th className="px-5 py-3.5">{t("instance.created")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/80">
-                    {instances.map((inst) => (
-                      <tr key={inst.id} className="hover:bg-zinc-800/40 transition-colors">
-                        <td className="px-5 py-4">
-                          <span className="font-bold text-white block">{inst.name}</span>
-                          <span className="font-mono text-zinc-500 text-[11px]">{inst.id}</span>
-                        </td>
-                        <td className="px-5 py-4 font-mono font-medium text-blue-400">
-                          {inst.primary_ipv4 || "192.168.1.100"}
-                        </td>
-                        <td className="px-5 py-4 text-zinc-300">
-                          {inst.cpu_cores}C / {inst.memory_mb}MB / {inst.disk_gb}GB
-                        </td>
+                  <tbody className="divide-y divide-zinc-800">
+                    {instances.map((i) => (
+                      <tr key={i.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <td className="px-5 py-4 font-bold text-white">{i.name}</td>
+                        <td className="px-5 py-4 font-mono text-zinc-300">{i.primary_ipv4 || "192.168.1.100"}</td>
                         <td className="px-5 py-4">
                           <StatusBadge
-                            severity={inst.observed_state === "running" ? "success" : "neutral"}
-                            label={t(`instance.status.${inst.observed_state}`) || inst.observed_state}
+                            severity={i.observed_state === "running" ? "success" : "neutral"}
+                            label={t(`instance.status.${i.observed_state}`) || i.observed_state}
                           />
                         </td>
+                        <td className="px-5 py-4 text-zinc-400">
+                          {i.cpu_cores} vCPU &bull; {i.memory_mb} MB &bull; {i.disk_gb} GB
+                        </td>
                         <td className="px-5 py-4 text-zinc-500 font-mono">
-                          {new Date(inst.created_at).toLocaleString()}
+                          {new Date(i.created_at).toLocaleString()}
                         </td>
                       </tr>
                     ))}
@@ -816,64 +780,67 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 4: Commerce (Orders, Invoices, Ledger, Products) */}
+        {/* TAB 4: Commerce Management */}
         {activeTab === "commerce" && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">Commerce & Billing Engine</h2>
-                <p className="text-xs text-zinc-400 mt-0.5">Double-entry accounting, order fulfillment, and product catalog</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">{t("admin.catalogTitle")}</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">{t("admin.catalogSubtitle")}</p>
               </div>
-
-              {/* Subtabs */}
-              <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 p-1 rounded-xl">
-                {[
-                  { id: "orders", label: t("commerce.orders") },
-                  { id: "invoices", label: t("commerce.invoices") },
-                  { id: "ledger", label: "Ledger" },
-                  { id: "products", label: "Products & Plans" },
-                ].map((st) => (
-                  <button
-                    key={st.id}
-                    onClick={() => setCommerceSubTab(st.id as any)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                      commerceSubTab === st.id ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => setShowCreateProductModal(true)}>
+                  + {t("admin.addProduct")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setShowCreatePlanModal(true)}>
+                  + {t("admin.addPlan")}
+                </Button>
               </div>
             </div>
 
-            {/* Subtab 1: Orders */}
+            {/* Subtabs */}
+            <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
+              {[
+                { id: "orders", label: t("commerce.orders") },
+                { id: "invoices", label: t("commerce.invoices") },
+                { id: "ledger", label: t("commerce.adminLedger") },
+                { id: "products", label: t("commerce.catalog") },
+              ].map((st) => (
+                <button
+                  key={st.id}
+                  onClick={() => setCommerceSubTab(st.id as any)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                    commerceSubTab === st.id
+                      ? "bg-blue-600 text-white"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Orders Subtab */}
             {commerceSubTab === "orders" && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
                     <tr>
                       <th className="px-5 py-3.5">{t("commerce.orderNo")}</th>
-                      <th className="px-5 py-3.5">User ID</th>
-                      <th className="px-5 py-3.5">{t("commerce.total")}</th>
                       <th className="px-5 py-3.5">{t("common.status")}</th>
+                      <th className="px-5 py-3.5">{t("commerce.total")}</th>
                       <th className="px-5 py-3.5">{t("common.timestamp")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/80">
-                    {orders.map((ord) => (
-                      <tr key={ord.id} className="hover:bg-zinc-800/40 transition-colors">
-                        <td className="px-5 py-4 font-mono font-medium text-white">{ord.order_no}</td>
-                        <td className="px-5 py-4 font-mono text-zinc-400 text-[11px]">{ord.user_id}</td>
-                        <td className="px-5 py-4 font-bold text-white">{formatPrice(ord.total_minor, ord.currency)}</td>
+                  <tbody className="divide-y divide-zinc-800">
+                    {orders.map((o) => (
+                      <tr key={o.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <td className="px-5 py-4 font-mono font-medium text-white">{o.order_no}</td>
                         <td className="px-5 py-4">
-                          <StatusBadge
-                            severity={ord.status === "paid" ? "success" : "warning"}
-                            label={ord.status.toUpperCase()}
-                          />
+                          <StatusBadge severity={o.status === "paid" ? "success" : "warning"} label={t(`order.status.${o.status}`) || o.status} />
                         </td>
-                        <td className="px-5 py-4 text-zinc-500 font-mono">
-                          {new Date(ord.created_at).toLocaleString()}
-                        </td>
+                        <td className="px-5 py-4 font-bold text-white">{formatPrice(o.total_minor, o.currency)}</td>
+                        <td className="px-5 py-4 text-zinc-400 font-mono">{new Date(o.created_at).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -881,34 +848,27 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            {/* Subtab 2: Invoices */}
+            {/* Invoices Subtab */}
             {commerceSubTab === "invoices" && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
                     <tr>
-                      <th className="px-5 py-3.5">Invoice #</th>
-                      <th className="px-5 py-3.5">User ID</th>
-                      <th className="px-5 py-3.5">{t("commerce.amount")}</th>
+                      <th className="px-5 py-3.5">{t("commerce.invoiceNo")}</th>
                       <th className="px-5 py-3.5">{t("common.status")}</th>
+                      <th className="px-5 py-3.5">{t("commerce.amount")}</th>
                       <th className="px-5 py-3.5">{t("common.timestamp")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/80">
+                  <tbody className="divide-y divide-zinc-800">
                     {invoices.map((inv) => (
-                      <tr key={inv.id} className="hover:bg-zinc-800/40 transition-colors">
+                      <tr key={inv.id} className="hover:bg-zinc-800/50 transition-colors">
                         <td className="px-5 py-4 font-mono font-medium text-white">{inv.invoice_no}</td>
-                        <td className="px-5 py-4 font-mono text-zinc-400 text-[11px]">{inv.user_id}</td>
-                        <td className="px-5 py-4 font-bold text-white">{formatPrice(inv.amount_minor, inv.currency)}</td>
                         <td className="px-5 py-4">
-                          <StatusBadge
-                            severity={inv.status === "paid" ? "success" : "warning"}
-                            label={inv.status.toUpperCase()}
-                          />
+                          <StatusBadge severity={inv.status === "paid" ? "success" : "warning"} label={t(`order.status.${inv.status}`) || inv.status} />
                         </td>
-                        <td className="px-5 py-4 text-zinc-500 font-mono">
-                          {new Date(inv.created_at).toLocaleString()}
-                        </td>
+                        <td className="px-5 py-4 font-bold text-white">{formatPrice(inv.amount_minor, inv.currency)}</td>
+                        <td className="px-5 py-4 text-zinc-400 font-mono">{new Date(inv.created_at).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -916,27 +876,23 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            {/* Subtab 3: Double-Entry Ledger */}
+            {/* Ledger Subtab */}
             {commerceSubTab === "ledger" && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
                     <tr>
-                      <th className="px-5 py-3.5">Transaction Type</th>
-                      <th className="px-5 py-3.5">Reference ID</th>
-                      <th className="px-5 py-3.5">Description</th>
+                      <th className="px-5 py-3.5">{t("commerce.txId")}</th>
+                      <th className="px-5 py-3.5">{t("commerce.desc")}</th>
                       <th className="px-5 py-3.5">{t("common.timestamp")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/80">
-                    {ledgerTxs.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-zinc-800/40 transition-colors">
-                        <td className="px-5 py-4 font-bold text-blue-400 uppercase">{tx.type}</td>
-                        <td className="px-5 py-4 font-mono text-zinc-400 text-[11px]">{tx.reference_id || tx.id}</td>
-                        <td className="px-5 py-4 text-zinc-300">{tx.description || "-"}</td>
-                        <td className="px-5 py-4 text-zinc-500 font-mono">
-                          {new Date(tx.created_at).toLocaleString()}
-                        </td>
+                  <tbody className="divide-y divide-zinc-800">
+                    {ledgerTxs.map((lt) => (
+                      <tr key={lt.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <td className="px-5 py-4 font-mono text-white text-[11px]">{lt.id}</td>
+                        <td className="px-5 py-4 text-zinc-300">{lt.description}</td>
+                        <td className="px-5 py-4 text-zinc-500 font-mono">{new Date(lt.created_at).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -944,58 +900,27 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            {/* Subtab 4: Product Catalog Management */}
+            {/* Products Subtab */}
             {commerceSubTab === "products" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-white text-base">VPS Products & Plans</h3>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={() => setShowCreateProductModal(true)}>
-                      + {t("common.createProduct")}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setShowCreatePlanModal(true)}>
-                      + {t("common.createPlan")}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {products.map((prod) => (
-                    <div key={prod.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-bold text-white text-base">
-                            {prod.name_i18n?.[locale] || Object.values(prod.name_i18n || {})[0] || prod.slug}
-                          </h4>
-                          <span className="font-mono text-xs text-zinc-500">Slug: {prod.slug}</span>
-                        </div>
-                        <StatusBadge severity="success" label="Active" />
-                      </div>
-
-                      <div className="space-y-2 pt-2 border-t border-zinc-800">
-                        <span className="text-xs font-semibold text-zinc-400 block">Available Plans:</span>
-                        {(prod.plans || []).map((pl) => (
-                          <div
-                            key={pl.id}
-                            className="bg-zinc-950 p-3 rounded-lg border border-zinc-800/80 flex items-center justify-between text-xs"
-                          >
-                            <div>
-                              <span className="font-bold text-zinc-200 block">
-                                {pl.name_i18n?.[locale] || Object.values(pl.name_i18n || {})[0] || pl.slug}
-                              </span>
-                              <span className="text-zinc-500 font-mono">
-                                {pl.cpu_cores}C / {pl.memory_mb}MB / {pl.disk_gb}GB
-                              </span>
-                            </div>
-                            <span className="font-bold text-blue-400 text-sm">
-                              {formatPrice(pl.price_minor, pl.currency)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {products.map((p) => (
+                  <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-base">{p.name_i18n?.[locale] || p.slug}</span>
+                      <StatusBadge severity="success" label={p.status} />
                     </div>
-                  ))}
-                </div>
+                    <span className="text-xs text-zinc-400 block font-mono">{t("admin.productSlug")}: {p.slug}</span>
+                    <div className="pt-2 border-t border-zinc-800 space-y-1">
+                      <span className="text-xs font-semibold text-zinc-300 block">{t("common.createPlan")}:</span>
+                      {(p.plans || []).map((pl) => (
+                        <div key={pl.id} className="flex justify-between text-xs text-zinc-400">
+                          <span>{pl.name_i18n?.[locale] || pl.slug}</span>
+                          <span className="text-blue-400 font-bold">{formatPrice(pl.price_minor, pl.currency)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1007,183 +932,41 @@ export const App: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-white tracking-tight">{t("common.operations")}</h2>
-                <p className="text-xs text-zinc-400 mt-0.5">Asynchronous operation event timeline and diagnostics</p>
+                <p className="text-xs text-zinc-400 mt-0.5">{t("admin.opInspector")}</p>
               </div>
               <Button size="sm" variant="outline" onClick={loadTabData} isLoading={loadingData}>
                 {t("common.refresh")}
               </Button>
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
-                  <tr>
-                    <th className="px-5 py-3.5">Operation Type</th>
-                    <th className="px-5 py-3.5">Trace ID</th>
-                    <th className="px-5 py-3.5">State</th>
-                    <th className="px-5 py-3.5">{t("common.timestamp")}</th>
-                    <th className="px-5 py-3.5 text-right">Diagnostic</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/80">
-                  {operations.map((op) => (
-                    <tr
-                      key={op.id}
-                      className="hover:bg-zinc-800/40 transition-colors cursor-pointer"
-                      onClick={() => setInspectOperation(op)}
-                    >
-                      <td className="px-5 py-4 font-bold text-white uppercase">{op.type}</td>
-                      <td className="px-5 py-4 font-mono text-zinc-400 text-[11px]">{op.trace_id || op.id}</td>
-                      <td className="px-5 py-4">
-                        <StatusBadge
-                          severity={op.status === "succeeded" ? "success" : op.status === "failed" ? "error" : "warning"}
-                          label={op.status.toUpperCase()}
-                        />
-
-                      </td>
-                      <td className="px-5 py-4 text-zinc-500 font-mono">
-                        {new Date(op.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <Button size="sm" variant="outline">
-                          Inspect &rarr;
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 6: Support Tickets Desk */}
-        {activeTab === "tickets" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-white tracking-tight">{t("common.tickets")}</h2>
-                <p className="text-xs text-zinc-400 mt-0.5">Customer technical inquiry desk and resolution threads</p>
-              </div>
-              <Button size="sm" variant="outline" onClick={loadTabData} isLoading={loadingData}>
-                {t("common.refresh")}
-              </Button>
-            </div>
-
-            {selectedTicket ? (
-              /* Ticket Discussion Thread for Admin */
-              <div className="space-y-4">
-                <Button size="sm" variant="outline" onClick={() => setSelectedTicket(null)}>
-                  &larr; Back to Tickets List
-                </Button>
-
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xs space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">{selectedTicket.subject}</h3>
-                      <span className="text-xs text-zinc-400 font-mono">
-                        User ID: {selectedTicket.user_id} &bull; Created: {new Date(selectedTicket.created_at).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <StatusBadge
-                        severity={selectedTicket.status === "open" ? "warning" : "neutral"}
-                        label={selectedTicket.status.toUpperCase()}
-                      />
-                      <Button
-                        size="sm"
-                        variant={selectedTicket.status === "open" ? "danger" : "secondary"}
-                        onClick={handleToggleTicketStatus}
-                      >
-                        {selectedTicket.status === "open" ? t("tickets.closeTicket") : t("tickets.reopenTicket")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Messages Thread */}
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                    {(selectedTicket.messages || []).map((msg) => {
-                      const isSupport = msg.sender_type === "admin";
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex flex-col ${isSupport ? "items-end" : "items-start"}`}
-                        >
-                          <div className="flex items-center gap-2 text-xs text-zinc-400 mb-1">
-                            <span className="font-semibold text-zinc-300">
-                              {isSupport ? "Technical Support (You)" : "Customer"}
-                            </span>
-                            <span>&bull;</span>
-                            <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
-                          </div>
-                          <div
-                            className={`p-4 rounded-2xl max-w-lg text-sm leading-relaxed ${
-                              isSupport
-                                ? "bg-blue-600 text-white rounded-br-none"
-                                : "bg-zinc-800 text-zinc-200 rounded-bl-none border border-zinc-700"
-                            }`}
-                          >
-                            {msg.message}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Admin Reply Form */}
-                  <form onSubmit={handleAdminReplyTicket} className="pt-4 border-t border-zinc-800 flex gap-3">
-                    <input
-                      type="text"
-                      required
-                      value={adminReplyText}
-                      onChange={(e) => setAdminReplyText(e.target.value)}
-                      placeholder={t("tickets.replyPlaceholder")}
-                      className="flex-1 px-4 py-2 bg-zinc-950 border border-zinc-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <Button type="submit" isLoading={loadingData}>
-                      {t("tickets.sendReply")}
-                    </Button>
-                  </form>
-                </div>
-              </div>
+            {operations.length === 0 ? (
+              <Card>
+                <div className="text-center py-12 text-zinc-500 text-sm">{t("common.empty")}</div>
+              </Card>
             ) : (
-              /* Tickets List Table */
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
                     <tr>
-                      <th className="px-5 py-3.5">Subject</th>
-                      <th className="px-5 py-3.5">Priority</th>
-                      <th className="px-5 py-3.5">Status</th>
-                      <th className="px-5 py-3.5">User ID</th>
-                      <th className="px-5 py-3.5">Created</th>
-                      <th className="px-5 py-3.5 text-right">Action</th>
+                      <th className="px-5 py-3.5">{t("common.operations")}</th>
+                      <th className="px-5 py-3.5">{t("common.status")}</th>
+                      <th className="px-5 py-3.5">{t("admin.traceId")}</th>
+                      <th className="px-5 py-3.5">{t("common.timestamp")}</th>
+                      <th className="px-5 py-3.5 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/80">
-                    {tickets.map((tkt) => (
-                      <tr
-                        key={tkt.id}
-                        className="hover:bg-zinc-800/40 transition-colors cursor-pointer"
-                        onClick={() => setSelectedTicket(tkt)}
-                      >
-                        <td className="px-5 py-4 font-bold text-white">{tkt.subject}</td>
+                  <tbody className="divide-y divide-zinc-800">
+                    {operations.map((op) => (
+                      <tr key={op.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <td className="px-5 py-4 font-mono font-medium text-white">{op.type}</td>
                         <td className="px-5 py-4">
-                          <span className="capitalize font-semibold text-zinc-300">{tkt.priority}</span>
+                          <StatusBadge severity={op.status === "succeeded" ? "success" : "warning"} label={t(`operation.status.${op.status}`) || op.status} />
                         </td>
-                        <td className="px-5 py-4">
-                          <StatusBadge
-                            severity={tkt.status === "open" ? "warning" : "neutral"}
-                            label={tkt.status.toUpperCase()}
-                          />
-                        </td>
-                        <td className="px-5 py-4 font-mono text-zinc-500 text-[11px]">{tkt.user_id}</td>
-                        <td className="px-5 py-4 text-zinc-500 font-mono">
-                          {new Date(tkt.created_at).toLocaleString()}
-                        </td>
+                        <td className="px-5 py-4 font-mono text-zinc-500 text-[11px]">{op.trace_id || op.id}</td>
+                        <td className="px-5 py-4 text-zinc-400 font-mono">{new Date(op.created_at).toLocaleString()}</td>
                         <td className="px-5 py-4 text-right">
-                          <Button size="sm" variant="outline">
-                            Reply &rarr;
+                          <Button size="sm" variant="outline" onClick={() => setInspectOperation(op)}>
+                            {t("admin.opInspector")} &rarr;
                           </Button>
                         </td>
                       </tr>
@@ -1195,53 +978,165 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 7: Users & Admins */}
+        {/* TAB 6: Ticket Desk */}
+        {activeTab === "tickets" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white tracking-tight">{t("admin.ticketDesk")}</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">{t("admin.ticketDeskSubtitle")}</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={loadTabData} isLoading={loadingData}>
+                {t("common.refresh")}
+              </Button>
+            </div>
+
+            {selectedTicket ? (
+              <div className="space-y-4">
+                <Button size="sm" variant="outline" onClick={() => setSelectedTicket(null)}>
+                  &larr; {t("tickets.back")}
+                </Button>
+
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xs space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">{selectedTicket.subject}</h3>
+                      <span className="text-xs text-zinc-400 font-mono">
+                        {t("tickets.ticketId")}: {selectedTicket.id} &bull; {t("instance.created")}: {new Date(selectedTicket.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge severity={selectedTicket.status === "open" ? "warning" : "neutral"} label={t(`tickets.${selectedTicket.status}`) || selectedTicket.status} />
+                      <Button size="sm" variant="outline" onClick={handleToggleTicketStatus}>
+                        {selectedTicket.status === "open" ? t("admin.closeTicket") : t("admin.reopenTicket")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                    {(selectedTicket.messages || []).map((msg) => {
+                      const isStaff = msg.sender_type === "admin";
+                      return (
+                        <div key={msg.id} className={`flex flex-col ${isStaff ? "items-end" : "items-start"}`}>
+                          <div className="flex items-center gap-2 text-xs text-zinc-400 mb-1">
+                            <span className="font-semibold text-zinc-300">
+                              {isStaff ? t("tickets.staff") : t("tickets.you")}
+                            </span>
+                            <span>&bull;</span>
+                            <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
+                          </div>
+                          <div className={`p-4 rounded-2xl max-w-lg text-sm leading-relaxed ${isStaff ? "bg-blue-600 text-white rounded-br-none" : "bg-zinc-800 text-zinc-200 rounded-bl-none"}`}>
+                            {msg.message}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Admin Reply Input */}
+                  <form onSubmit={handleAdminReplyTicket} className="pt-4 border-t border-zinc-800 flex gap-3">
+                    <input
+                      type="text"
+                      required
+                      value={adminReplyText}
+                      onChange={(e) => setAdminReplyText(e.target.value)}
+                      placeholder={t("admin.replyPlaceholder")}
+                      className="flex-1 px-4 py-2 bg-zinc-950 border border-zinc-700 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Button type="submit" isLoading={loadingData}>
+                      {t("admin.sendStaffReply")}
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {tickets.length === 0 ? (
+                  <Card>
+                    <div className="text-center py-12 text-zinc-500 text-sm">{t("tickets.noTickets")}</div>
+                  </Card>
+                ) : (
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
+                        <tr>
+                          <th className="px-5 py-3.5">{t("tickets.subject")}</th>
+                          <th className="px-5 py-3.5">{t("tickets.priority")}</th>
+                          <th className="px-5 py-3.5">{t("common.status")}</th>
+                          <th className="px-5 py-3.5">{t("common.timestamp")}</th>
+                          <th className="px-5 py-3.5 text-right">{t("common.actions")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800">
+                        {tickets.map((tkt) => (
+                          <tr key={tkt.id} className="hover:bg-zinc-800/50 transition-colors cursor-pointer" onClick={() => setSelectedTicket(tkt)}>
+                            <td className="px-5 py-4 font-bold text-white">{tkt.subject}</td>
+                            <td className="px-5 py-4 font-semibold text-zinc-300">
+                              {t(`tickets.priority${tkt.priority.charAt(0).toUpperCase() + tkt.priority.slice(1)}`)}
+                            </td>
+                            <td className="px-5 py-4">
+                              <StatusBadge severity={tkt.status === "open" ? "warning" : "neutral"} label={t(`tickets.${tkt.status}`) || tkt.status} />
+                            </td>
+                            <td className="px-5 py-4 text-zinc-400 font-mono">{new Date(tkt.created_at).toLocaleString()}</td>
+                            <td className="px-5 py-4 text-right">
+                              <Button size="sm" variant="outline">{t("common.view")} &rarr;</Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 7: Users & Admins Management */}
         {activeTab === "users" && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-white tracking-tight">{t("common.users")}</h2>
-                <p className="text-xs text-zinc-400 mt-0.5">Directory of registered users and privileged administrators</p>
+                <p className="text-xs text-zinc-400 mt-0.5">{t("auth.adminPortal")}</p>
               </div>
-
-              <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 p-1 rounded-xl">
-                {[
-                  { id: "users", label: t("common.users") },
-                  { id: "admins", label: t("common.admins") },
-                ].map((st) => (
-                  <button
-                    key={st.id}
-                    onClick={() => setUsersSubTab(st.id as any)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                      usersSubTab === st.id ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setUsersSubTab("users")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                    usersSubTab === "users" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  {t("common.users")}
+                </button>
+                <button
+                  onClick={() => setUsersSubTab("admins")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                    usersSubTab === "admins" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  {t("common.admins")}
+                </button>
               </div>
             </div>
 
             {usersSubTab === "users" ? (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
                     <tr>
-                      <th className="px-5 py-3.5">Email</th>
-                      <th className="px-5 py-3.5">User ID</th>
-                      <th className="px-5 py-3.5">Locale</th>
-                      <th className="px-5 py-3.5">Registered</th>
+                      <th className="px-5 py-3.5">{t("auth.email")}</th>
+                      <th className="px-5 py-3.5">{t("common.status")}</th>
+                      <th className="px-5 py-3.5">{t("common.timestamp")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/80">
+                  <tbody className="divide-y divide-zinc-800">
                     {users.map((u) => (
-                      <tr key={u.id} className="hover:bg-zinc-800/40 transition-colors">
+                      <tr key={u.id} className="hover:bg-zinc-800/50 transition-colors">
                         <td className="px-5 py-4 font-bold text-white">{u.email}</td>
-                        <td className="px-5 py-4 font-mono text-zinc-400 text-[11px]">{u.id}</td>
-                        <td className="px-5 py-4 font-mono text-zinc-400">{u.locale}</td>
-                        <td className="px-5 py-4 text-zinc-500 font-mono">
-                          {new Date(u.created_at).toLocaleString()}
-                        </td>
+                        <td className="px-5 py-4"><StatusBadge severity="success" label={u.status} /></td>
+                        <td className="px-5 py-4 text-zinc-500 font-mono">{new Date(u.created_at).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1250,25 +1145,21 @@ export const App: React.FC = () => {
             ) : (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-zinc-400 uppercase tracking-wider font-semibold border-b border-zinc-800">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-semibold uppercase">
                     <tr>
-                      <th className="px-5 py-3.5">Admin Email</th>
-                      <th className="px-5 py-3.5">Admin ID</th>
-                      <th className="px-5 py-3.5">Status</th>
-                      <th className="px-5 py-3.5">Created</th>
+                      <th className="px-5 py-3.5">{t("auth.email")}</th>
+                      <th className="px-5 py-3.5">{t("common.status")}</th>
+                      <th className="px-5 py-3.5">2FA</th>
+                      <th className="px-5 py-3.5">{t("common.timestamp")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/80">
+                  <tbody className="divide-y divide-zinc-800">
                     {admins.map((a) => (
-                      <tr key={a.id} className="hover:bg-zinc-800/40 transition-colors">
+                      <tr key={a.id} className="hover:bg-zinc-800/50 transition-colors">
                         <td className="px-5 py-4 font-bold text-white">{a.email}</td>
-                        <td className="px-5 py-4 font-mono text-zinc-400 text-[11px]">{a.id}</td>
-                        <td className="px-5 py-4">
-                          <StatusBadge severity="success" label={a.status || "ACTIVE"} />
-                        </td>
-                        <td className="px-5 py-4 text-zinc-500 font-mono">
-                          {new Date(a.created_at).toLocaleString()}
-                        </td>
+                        <td className="px-5 py-4"><StatusBadge severity="success" label={a.status} /></td>
+                        <td className="px-5 py-4"><StatusBadge severity={a.two_factor_enabled ? "success" : "neutral"} label={a.two_factor_enabled ? "ON" : "OFF"} /></td>
+                        <td className="px-5 py-4 text-zinc-500 font-mono">{new Date(a.created_at).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1279,42 +1170,62 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* MODAL: Operation Inspector Drawer */}
+      {/* DRAWER: Operation Inspector */}
       {inspectOperation && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative space-y-4">
-            <button
-              onClick={() => setInspectOperation(null)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold cursor-pointer"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold text-white">{t("common.operationInspector")}</h3>
-            <div className="grid grid-cols-2 gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-xs">
-              <div>
-                <span className="text-zinc-500 block">Operation ID</span>
-                <span className="font-mono text-white block mt-0.5">{inspectOperation.id}</span>
-              </div>
-              <div>
-                <span className="text-zinc-500 block">Trace ID</span>
-                <span className="font-mono text-white block mt-0.5">{inspectOperation.trace_id || "-"}</span>
-              </div>
-              <div>
-                <span className="text-zinc-500 block">Status</span>
-                <span className="font-bold text-blue-400 block mt-0.5 uppercase">{inspectOperation.status}</span>
-              </div>
-              <div>
-                <span className="text-zinc-500 block">Phase / Step</span>
-                <span className="font-mono text-zinc-300 block mt-0.5">{inspectOperation.phase || inspectOperation.status}</span>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end">
+          <div className="bg-zinc-900 border-l border-zinc-800 w-full max-w-lg p-6 flex flex-col justify-between shadow-2xl animate-in slide-in-from-right">
+            <div className="space-y-6 overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                <h3 className="text-lg font-bold text-white">{t("admin.opInspector")}</h3>
+                <button
+                  onClick={() => setInspectOperation(null)}
+                  className="text-zinc-400 hover:text-white font-bold cursor-pointer text-xl"
+                >
+                  &times;
+                </button>
               </div>
 
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                  <span className="text-zinc-400">{t("admin.traceId")}</span>
+                  <span className="font-mono text-zinc-200">{inspectOperation.trace_id || inspectOperation.id}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                  <span className="text-zinc-400">{t("common.operations")}</span>
+                  <span className="font-mono text-zinc-200">{inspectOperation.type}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                  <span className="text-zinc-400">{t("common.status")}</span>
+                  <StatusBadge severity={inspectOperation.status === "succeeded" ? "success" : "warning"} label={t(`operation.status.${inspectOperation.status}`) || inspectOperation.status} />
+                </div>
+              </div>
+
+              {/* Step Timeline */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-zinc-200 text-sm">{t("admin.stepTimeline")}</h4>
+                <div className="space-y-2">
+                  {(inspectOperation.steps || []).map((step, idx) => (
+                    <div key={idx} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800/80 flex items-center justify-between text-xs">
+                      <span className="font-mono text-zinc-300">{step.step_key}</span>
+                      <StatusBadge severity={step.status === "succeeded" ? "success" : "neutral"} label={step.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Raw Diagnostics */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-zinc-200 text-sm">{t("admin.rawDiagnostics")}</h4>
+                <pre className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 text-[11px] font-mono text-zinc-400 overflow-x-auto max-h-48">
+                  {JSON.stringify(inspectOperation, null, 2)}
+                </pre>
+              </div>
             </div>
 
-            <div>
-              <span className="text-xs font-semibold text-zinc-400 mb-2 block">{t("common.rawDiagnostic")}</span>
-              <pre className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-[11px] font-mono text-zinc-300 max-h-60 overflow-y-auto">
-                {JSON.stringify(inspectOperation, null, 2)}
-              </pre>
+            <div className="pt-4 border-t border-zinc-800 flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => setInspectOperation(null)}>
+                {t("common.close")}
+              </Button>
             </div>
           </div>
         </div>
@@ -1323,29 +1234,22 @@ export const App: React.FC = () => {
       {/* MODAL: Add Node */}
       {showCreateNodeModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowCreateNodeModal(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold cursor-pointer"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold text-white mb-4">{t("common.createNode")}</h3>
-            <form onSubmit={handleCreateNode} className="space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-white">{t("admin.addNode")}</h3>
+            <form onSubmit={handleCreateNode} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Node Name</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.nodeName")}</label>
                 <input
                   type="text"
                   required
                   value={nodeName}
                   onChange={(e) => setNodeName(e.target.value)}
-                  placeholder="node-us-west-2"
+                  placeholder="node-01.dc1"
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Region</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.region")}</label>
                 <input
                   type="text"
                   required
@@ -1354,46 +1258,41 @@ export const App: React.FC = () => {
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">CPU Cores</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">{t("commerce.cpu")}</label>
                   <input
                     type="number"
-                    required
                     value={nodeCPU}
                     onChange={(e) => setNodeCPU(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
+                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">RAM (MB)</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">{t("commerce.memory")}</label>
                   <input
                     type="number"
-                    required
                     value={nodeRAM}
                     onChange={(e) => setNodeRAM(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
+                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Disk (GB)</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">{t("commerce.disk")}</label>
                   <input
                     type="number"
-                    required
                     value={nodeDisk}
                     onChange={(e) => setNodeDisk(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
+                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
                   />
                 </div>
               </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateNodeModal(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" size="sm" isLoading={loadingData}>
-                  Create Node
+                  {t("common.confirm")}
                 </Button>
               </div>
             </form>
@@ -1404,46 +1303,38 @@ export const App: React.FC = () => {
       {/* MODAL: Add Provider */}
       {showCreateProviderModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowCreateProviderModal(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold cursor-pointer"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold text-white mb-4">{t("common.createProvider")}</h3>
-            <form onSubmit={handleCreateProvider} className="space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-white">{t("admin.addProvider")}</h3>
+            <form onSubmit={handleCreateProvider} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Provider Name</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.provName")}</label>
                 <input
                   type="text"
                   required
                   value={providerName}
                   onChange={(e) => setProviderName(e.target.value)}
-                  placeholder="Primary LXD Cluster"
+                  placeholder="CLICD Cluster 1"
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Driver Type</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.provType")}</label>
                 <select
                   value={providerType}
                   onChange={(e) => setProviderType(e.target.value)}
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="lxd">LXD / Incus API</option>
-                  <option value="runman">Runman Host Agent</option>
-                  <option value="mock">Mock Simulator</option>
+                  <option value="mock">Mock Provider</option>
+                  <option value="clicd">CLICD Direct Provider</option>
+                  <option value="runman">Runman gRPC Agent</option>
                 </select>
               </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateProviderModal(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" size="sm" isLoading={loadingData}>
-                  Connect Provider
+                  {t("common.confirm")}
                 </Button>
               </div>
             </form>
@@ -1454,57 +1345,48 @@ export const App: React.FC = () => {
       {/* MODAL: Add Product */}
       {showCreateProductModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowCreateProductModal(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold cursor-pointer"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold text-white mb-4">{t("common.createProduct")}</h3>
-            <form onSubmit={handleCreateProduct} className="space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-white">{t("admin.addProduct")}</h3>
+            <form onSubmit={handleCreateProduct} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Slug</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.productSlug")}</label>
                 <input
                   type="text"
                   required
                   value={productSlug}
                   onChange={(e) => setProductSlug(e.target.value)}
-                  placeholder="cloud-vps-ssd"
+                  placeholder="standard-vps"
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Name (en-US)</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.prodNameEn")}</label>
                 <input
                   type="text"
                   required
                   value={productNameEn}
                   onChange={(e) => setProductNameEn(e.target.value)}
-                  placeholder="NVMe Cloud VPS"
+                  placeholder="Standard Cloud VPS"
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Name (zh-CN)</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.prodNameZh")}</label>
                 <input
                   type="text"
                   required
                   value={productNameZh}
                   onChange={(e) => setProductNameZh(e.target.value)}
-                  placeholder="NVMe 高性能云服务器"
+                  placeholder="标准云服务器"
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateProductModal(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" size="sm" isLoading={loadingData}>
-                  Create Product
+                  {t("common.confirm")}
                 </Button>
               </div>
             </form>
@@ -1515,127 +1397,110 @@ export const App: React.FC = () => {
       {/* MODAL: Add Plan */}
       {showCreatePlanModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setShowCreatePlanModal(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold cursor-pointer"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold text-white mb-4">{t("common.createPlan")}</h3>
-            <form onSubmit={handleCreatePlan} className="space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-white">{t("admin.addPlan")}</h3>
+            <form onSubmit={handleCreatePlan} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1">Parent Product</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.targetProduct")}</label>
                 <select
                   value={planProductID}
                   onChange={(e) => setPlanProductID(e.target.value)}
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.slug}</option>
+                    <option key={p.id} value={p.id}>{p.name_i18n?.[locale] || p.slug}</option>
                   ))}
                 </select>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Plan Slug</label>
-                  <input
-                    type="text"
-                    required
-                    value={planSlug}
-                    onChange={(e) => setPlanSlug(e.target.value)}
-                    placeholder="starter-2c"
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Monthly Price ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={planPrice}
-                    onChange={(e) => setPlanPrice(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.planSlug")}</label>
+                <input
+                  type="text"
+                  required
+                  value={planSlug}
+                  onChange={(e) => setPlanSlug(e.target.value)}
+                  placeholder="vps-2c-4g"
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Name (en-US)</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.planNameEn")}</label>
                   <input
                     type="text"
                     required
                     value={planNameEn}
                     onChange={(e) => setPlanNameEn(e.target.value)}
-                    placeholder="Standard VPS"
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
+                    placeholder="2 Core 4GB RAM"
+                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1">Name (zh-CN)</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.planNameZh")}</label>
                   <input
                     type="text"
                     required
                     value={planNameZh}
                     onChange={(e) => setPlanNameZh(e.target.value)}
-                    placeholder="标准型 VPS"
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
+                    placeholder="2核 4G内存"
+                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-white"
                   />
                 </div>
               </div>
-
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">CPU Cores</label>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">{t("commerce.cpu")}</label>
                   <input
                     type="number"
-                    required
                     value={planCPU}
                     onChange={(e) => setPlanCPU(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white"
+                    className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">RAM (MB)</label>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">{t("commerce.memory")}</label>
                   <input
                     type="number"
-                    required
                     value={planRAM}
                     onChange={(e) => setPlanRAM(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white"
+                    className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">Disk (GB)</label>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">{t("commerce.disk")}</label>
                   <input
                     type="number"
-                    required
                     value={planDisk}
                     onChange={(e) => setPlanDisk(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white"
+                    className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">Traffic (GB)</label>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">{t("commerce.traffic")}</label>
                   <input
                     type="number"
-                    required
                     value={planTraffic}
                     onChange={(e) => setPlanTraffic(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white"
+                    className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">{t("commerce.amount")}</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={planPrice}
+                    onChange={(e) => setPlanPrice(Number(e.target.value))}
+                    className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-white"
                   />
                 </div>
               </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setShowCreatePlanModal(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" size="sm" isLoading={loadingData}>
-                  Publish Plan
+                  {t("common.confirm")}
                 </Button>
               </div>
             </form>
@@ -1643,66 +1508,51 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: 2FA TOTP Setup */}
+      {/* MODAL: 2FA Setup */}
       {show2FAModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative space-y-4">
-            <button
-              onClick={() => setShow2FAModal(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold cursor-pointer"
-            >
-              &times;
-            </button>
-            <h3 className="text-lg font-bold text-white">RFC 6238 TOTP 2FA</h3>
-            <p className="text-xs text-zinc-400">
-              Bind your Google Authenticator or 1Password client
-            </p>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-white">{t("admin.twofaTitle")}</h3>
+            <p className="text-xs text-zinc-400">{t("admin.twofaDesc")}</p>
 
             {twoFAMsg && <Alert severity="info">{twoFAMsg}</Alert>}
 
             {twoFASecret && (
-              <div className="bg-zinc-950 p-3 rounded-xl border border-zinc-800 text-center space-y-2">
-                <span className="text-[11px] text-zinc-500 uppercase block font-semibold">Secret Key</span>
-                <span className="font-mono text-sm text-blue-400 select-all tracking-wider font-bold block">
-                  {twoFASecret}
-                </span>
-                <span className="text-[10px] text-zinc-500 block truncate">
-                  URI: {twoFAUrl}
-                </span>
+              <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 space-y-1">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-semibold">TOTP Secret:</span>
+                <span className="font-mono text-xs text-blue-400 select-all block break-all font-bold">{twoFASecret}</span>
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-zinc-400">6-Digit Authenticator Code</label>
+            {twoFAUrl && (
+              <div className="p-2 bg-zinc-950 rounded-lg border border-zinc-800 text-[10px] font-mono text-zinc-500 break-all select-all">
+                {twoFAUrl}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">{t("admin.twofaCodeLabel")}</label>
               <input
                 type="text"
                 maxLength={6}
                 value={twoFACode}
                 onChange={(e) => setTwoFACode(e.target.value)}
                 placeholder="123456"
-                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-sm text-center text-white tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-center font-mono tracking-widest text-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <Button className="w-full font-bold" onClick={handleEnable2FA}>
-              Verify & Enable 2FA
-            </Button>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShow2FAModal(false)}>
+                {t("common.close")}
+              </Button>
+              <Button size="sm" onClick={handleEnable2FA}>
+                {t("admin.verifyEnable2fa")}
+              </Button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <footer className="bg-zinc-900 border-t border-zinc-800 mt-auto py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 gap-3">
-          <div>
-            &copy; {new Date().getFullYear()} VPS Billing Admin Console. Confidential & Proprietary.
-          </div>
-          <div className="flex items-center gap-4 font-mono text-[11px]">
-            <span>Audit: Enabled</span>
-            <span>Ledger: Immutable</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

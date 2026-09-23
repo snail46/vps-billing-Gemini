@@ -89,6 +89,7 @@ func (h *AdminAuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		},
 		"roles":       sess.Roles,
 		"permissions": sess.Permissions,
+		"token":       sess.Token,
 		"csrf_token":  sess.CSRFToken,
 	})
 }
