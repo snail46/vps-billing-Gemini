@@ -55,9 +55,34 @@
 
 ---
 
-## 快速开始
+## 快速部署与启动
 
-### 方式一：Docker Compose 一键启动（推荐）
+### 方式一：预构建镜像一键拉取运行（线上生产推荐，无需本地编译）
+
+GitHub Actions 已自动将最新容器镜像发布至 GitHub Container Registry (GHCR)。
+在云服务器上只需 `docker-compose.yml` 与 `.env` 两份文件即可一键拉取镜像启动：
+
+```bash
+# 1. 新建部署目录并下载预设配置
+mkdir -p vps-billing && cd vps-billing
+curl -fsSL https://raw.githubusercontent.com/snail46/vps-billing-Gemini/main/docker-compose.prod.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/snail46/vps-billing-Gemini/main/deploy/.env.example -o .env
+
+# 2. 修改 .env 密码与秘钥配置（生产环境务必替换默认密钥）
+# nano .env
+
+# 3. 一键拉取镜像并启动全量容器集群
+docker compose up -d
+```
+
+若已克隆本仓库代码，也可直接在项目根目录下执行：
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+---
+
+### 方式二：本地源码构建启动（适合二次开发与定制）
 
 确保本地已安装 Docker 和 Docker Compose，在项目根目录下执行：
 
@@ -67,18 +92,18 @@ docker compose up -d --build
 
 系统将按依赖关系与健康检查自动拉起以下 6 个容器服务：
 
-| 服务名称 | 监听端口 | 说明 |
-|---|---|---|
-| **postgres** | `5432` | PostgreSQL 17（容器启动自动执行增量迁移） |
-| **redis** | `6379` | Redis 8 缓存与异步任务队列 |
-| **server** | `8080` | 后端 REST API、SSE 实时事件与 Prometheus 指标 |
-| **worker** | - | 异步任务处理器与定期对账协调器 |
-| **user-web** | `3000` | 用户自服务前台 Web SPA |
-| **admin-web** | `3001` | 管理员控制台 Web SPA |
+| 服务名称 | 监听端口 | 镜像来源 | 说明 |
+|---|---|---|---|
+| **postgres** | `5432` | `postgres:17` | 数据库（启动自动执行增量迁移） |
+| **redis** | `6379` | `redis:8-alpine` | 缓存与异步任务消息队列 |
+| **server** | `8080` | `ghcr.io/snail46/vps-billing-gemini/server` | 后端 REST API、SSE 实时事件与 Prometheus 指标 |
+| **worker** | - | `ghcr.io/snail46/vps-billing-gemini/worker` | 异步任务处理器与定期对账协调器 |
+| **user-web** | `3000` | `ghcr.io/snail46/vps-billing-gemini/user-web` | 用户自服务前台 Web SPA |
+| **admin-web** | `3001` | `ghcr.io/snail46/vps-billing-gemini/admin-web` | 管理员运营控制台 Web SPA |
 
 ---
 
-### 方式二：本地研发模式运行
+### 方式三：本地裸机研发模式运行
 
 #### 1. 启动数据库与 Redis
 ```bash
