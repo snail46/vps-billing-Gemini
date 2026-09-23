@@ -20,6 +20,7 @@ import (
 	serviceOperation "vps-billing/internal/service/operation"
 	"vps-billing/internal/service/session"
 	serviceSubscription "vps-billing/internal/service/subscription"
+	serviceTicket "vps-billing/internal/service/ticket"
 )
 
 type RouterDeps struct {
@@ -39,6 +40,7 @@ type RouterDeps struct {
 	SubscriptionSvc *serviceSubscription.SubscriptionService
 	OperationSvc    *serviceOperation.Service
 	InfraRepo       domainInfrastructure.InfrastructureRepository
+	TicketSvc       *serviceTicket.Service
 }
 
 func NewRouterWithDeps(deps RouterDeps) http.Handler {
@@ -87,7 +89,12 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 		operationHandler     *handler.OperationHandler
 		instanceHandler      *handler.InstanceHandler
 		adminInfraHandler    *handler.AdminInfrastructureHandler
+		ticketHandler        *handler.TicketHandler
 	)
+
+	if deps.TicketSvc != nil {
+		ticketHandler = handler.NewTicketHandler(deps.TicketSvc)
+	}
 
 	if deps.OperationSvc != nil {
 		operationHandler = handler.NewOperationHandler(deps.OperationSvc)
@@ -184,9 +191,18 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 				// Wallet & Invoices
 				if walletInvoiceHandler != nil {
 					r.Get("/wallet", walletInvoiceHandler.GetWallet)
+					r.Post("/wallet/deposit", walletInvoiceHandler.Deposit)
 					r.Get("/wallet/ledger", walletInvoiceHandler.ListUserLedger)
 					r.Get("/invoices", walletInvoiceHandler.ListInvoices)
 					r.Get("/invoices/{id}", walletInvoiceHandler.GetInvoice)
+				}
+
+				// Tickets
+				if ticketHandler != nil {
+					r.Get("/tickets", ticketHandler.ListMyTickets)
+					r.Post("/tickets", ticketHandler.CreateTicket)
+					r.Get("/tickets/{id}", ticketHandler.GetTicket)
+					r.Post("/tickets/{id}/reply", ticketHandler.UserReplyTicket)
 				}
 
 				// Subscriptions
@@ -245,12 +261,23 @@ func NewRouterWithDeps(deps RouterDeps) http.Handler {
 
 					if adminInfraHandler != nil {
 						r.Get("/providers", adminInfraHandler.ListProviders)
+						r.Post("/providers", adminInfraHandler.CreateProvider)
 						r.Get("/nodes", adminInfraHandler.ListNodes)
+						r.Post("/nodes", adminInfraHandler.CreateNode)
 						r.Get("/instances", adminInfraHandler.ListInstances)
 						r.Get("/operations", adminInfraHandler.ListOperations)
+						r.Get("/operations/{id}", adminInfraHandler.GetOperation)
 						r.Get("/users", adminInfraHandler.ListUsers)
 						r.Get("/admins", adminInfraHandler.ListAdmins)
 					}
+
+					if ticketHandler != nil {
+						r.Get("/tickets", ticketHandler.AdminListTickets)
+						r.Get("/tickets/{id}", ticketHandler.GetTicket)
+						r.Post("/tickets/{id}/reply", ticketHandler.AdminReplyTicket)
+						r.Post("/tickets/{id}/status", ticketHandler.AdminUpdateTicketStatus)
+					}
+
 				})
 			}
 		})

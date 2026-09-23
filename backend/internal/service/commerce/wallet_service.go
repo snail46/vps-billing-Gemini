@@ -2,6 +2,7 @@ package commerce
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	domainCommerce "vps-billing/internal/domain/commerce"
@@ -22,7 +23,18 @@ func NewWalletService(
 	}
 }
 
+func (s *WalletService) Deposit(ctx context.Context, userID uuid.UUID, amountMinor int64, currency string) (*domainCommerce.Wallet, error) {
+	if amountMinor <= 0 {
+		return nil, errors.New("deposit amount must be greater than zero")
+	}
+	if currency == "" {
+		currency = "USD"
+	}
+	return s.walletRepo.DepositWalletTx(ctx, userID, amountMinor, currency, "Wallet deposit via online payment")
+}
+
 func (s *WalletService) GetUserWallet(ctx context.Context, userID uuid.UUID, currency string) (*domainCommerce.Wallet, error) {
+
 	if currency == "" {
 		currency = "USD"
 	}

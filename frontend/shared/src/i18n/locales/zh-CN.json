@@ -28,8 +28,22 @@
     "apiReady": "系统就绪 (Ready)",
     "database": "PostgreSQL 数据库",
     "redis": "Redis 缓存与队列",
-    "worker": "后台任务 Worker"
+    "worker": "后台任务 Worker",
+    "sshConnection": "SSH 连接命令",
+    "rootPassword": "Root 密码",
+    "copy": "复制",
+    "copied": "已复制!",
+    "trafficUsage": "本月流量使用",
+    "renew": "续费服务器",
+    "createNode": "添加新节点",
+    "createProvider": "添加 Provider",
+    "createProduct": "添加产品",
+    "createPlan": "添加套餐",
+    "setup2fa": "配置 2FA",
+    "operationInspector": "任务执行审计",
+    "rawDiagnostic": "原始诊断信息"
   },
+
   "auth": {
     "login": "登录",
     "register": "注册账户",
@@ -130,8 +144,13 @@
     "adminLedger": "复式记账明细",
     "ledgerTransaction": "记账交易",
     "debit": "借方",
-    "credit": "贷方"
+    "credit": "贷方",
+    "deposit": "账户充值",
+    "depositTitle": "充值钱包余额",
+    "depositAmount": "充值金额 ($)",
+    "depositSuccess": "充值成功，资金已入账！"
   },
+
   "order": {
     "status": {
       "pending": "待支付",
@@ -189,8 +208,14 @@
     "priority": "优先级",
     "submit": "提交工单",
     "open": "处理中",
-    "closed": "已结单"
+    "closed": "已结单",
+    "reply": "回复",
+    "replyPlaceholder": "输入您的回复内容...",
+    "sendReply": "发送回复",
+    "closeTicket": "关闭工单",
+    "reopenTicket": "重新打开工单"
   },
+
   "errors": {
     "internal_error": "系统发生未知内部错误",
     "not_found": "请求的资源未找到",

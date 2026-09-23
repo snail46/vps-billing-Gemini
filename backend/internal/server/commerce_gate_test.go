@@ -495,6 +495,65 @@ func (r *testCommerceRepo) ListUserLedgerEntries(_ context.Context, userID uuid.
 	return res, nil
 }
 
+func (r *testCommerceRepo) DepositWalletTx(_ context.Context, userID uuid.UUID, amountMinor int64, currency, description string) (*domainCommerce.Wallet, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if currency == "" {
+		currency = "USD"
+	}
+	key := fmt.Sprintf("%s:%s", userID.String(), currency)
+	w, ok := r.wallets[key]
+	if !ok {
+		w = &domainCommerce.Wallet{
+			ID:                    uuid.New(),
+			UserID:                userID,
+			Currency:              currency,
+			AvailableBalanceMinor: 0,
+			CreatedAt:             time.Now().UTC(),
+			UpdatedAt:             time.Now().UTC(),
+		}
+		r.wallets[key] = w
+	}
+	w.AvailableBalanceMinor += amountMinor
+	w.UpdatedAt = time.Now().UTC()
+
+	now := time.Now().UTC()
+	txID := uuid.New()
+	refType := "wallet_deposit"
+	r.ledgerTxs = append(r.ledgerTxs, &domainCommerce.LedgerTransaction{
+		ID:            txID,
+		Type:          "wallet_deposit",
+		ReferenceType: &refType,
+		ReferenceID:   &w.ID,
+		Description:   &description,
+		CreatedAt:     now,
+	})
+	r.ledgerEnts = append(r.ledgerEnts,
+		&domainCommerce.LedgerEntry{
+			ID:            uuid.New(),
+			TransactionID: txID,
+			AccountType:   domainCommerce.AccountPaymentGateway,
+			AccountID:     domainCommerce.SystemAccountPaymentGateway,
+			Direction:     domainCommerce.DirectionDebit,
+			AmountMinor:   amountMinor,
+			Currency:      currency,
+			CreatedAt:     now,
+		},
+		&domainCommerce.LedgerEntry{
+			ID:            uuid.New(),
+			TransactionID: txID,
+			AccountType:   domainCommerce.AccountUserWallet,
+			AccountID:     userID,
+			Direction:     domainCommerce.DirectionCredit,
+			AmountMinor:   amountMinor,
+			Currency:      currency,
+			CreatedAt:     now,
+		},
+	)
+
+	return w, nil
+}
+
 // GATE TEST: Duplicate Payment Webhook Concurrency Gate Test (100 concurrent callbacks)
 func TestDuplicateWebhookConcurrency(t *testing.T) {
 	ctx := context.Background()

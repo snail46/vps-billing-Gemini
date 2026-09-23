@@ -19,4 +19,6 @@ export * from "./types/instance";
 export * from "./api/instance";
 export * from "./types/infrastructure";
 export * from "./api/admin";
+export * from "./types/ticket";
+export * from "./api/ticket";
 

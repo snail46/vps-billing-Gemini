@@ -54,13 +54,28 @@ export const commerceApi = {
   async getWallet(): Promise<{ wallet: Wallet }> {
     const res = await apiFetch<{ wallet: Wallet }>("/api/v1/wallet");
     if (!res.success) throw new Error(res.error?.message_key || "failed to get wallet");
-    return res.data;
+    return res.data!;
+  },
+
+  async deposit(amountMinor: number, currency = "USD"): Promise<{ wallet: Wallet }> {
+    const res = await apiFetch<{ wallet: Wallet }>("/api/v1/wallet/deposit", {
+      method: "POST",
+      body: JSON.stringify({ amount_minor: amountMinor, currency }),
+    });
+    if (!res.success) throw new Error(res.error?.message_key || "failed to deposit");
+    return res.data!;
+  },
+
+  async listUserLedger(): Promise<{ ledger_entries: any[] }> {
+    const res = await apiFetch<{ ledger_entries: any[] }>("/api/v1/wallet/ledger");
+    if (!res.success) throw new Error(res.error?.message_key || "failed to list ledger");
+    return res.data!;
   },
 
   async listInvoices(): Promise<{ invoices: Invoice[] }> {
     const res = await apiFetch<{ invoices: Invoice[] }>("/api/v1/invoices");
     if (!res.success) throw new Error(res.error?.message_key || "failed to list invoices");
-    return res.data;
+    return res.data!;
   },
 
   // Admin Commerce

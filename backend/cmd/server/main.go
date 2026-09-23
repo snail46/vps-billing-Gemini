@@ -34,6 +34,7 @@ import (
 	"vps-billing/internal/service/scheduler"
 	"vps-billing/internal/service/session"
 	serviceSubscription "vps-billing/internal/service/subscription"
+	serviceTicket "vps-billing/internal/service/ticket"
 	"vps-billing/internal/workflow"
 )
 
@@ -102,6 +103,7 @@ func main() {
 	var subSvc *serviceSubscription.SubscriptionService
 	var opSvc *serviceOperation.Service
 	var infraRepo domainInfrastructure.InfrastructureRepository
+	var ticketSvc *serviceTicket.Service
 
 	if dbPool != nil {
 		queries := repository.New(dbPool)
@@ -113,6 +115,8 @@ func main() {
 		subRepo := repository.NewPostgresSubscriptionRepository(queries)
 		opRepo := repository.NewPostgresOperationRepository(queries)
 		infraRepo = repository.NewPostgresInfrastructureRepository(dbPool, queries)
+		ticketRepo := repository.NewTicketRepository(dbPool)
+		ticketSvc = serviceTicket.NewService(ticketRepo)
 
 		// Seed initial roles & permissions
 		if err := rbacRepo.SeedInitialRolesAndPermissions(ctx); err != nil {
@@ -256,6 +260,7 @@ func main() {
 		SubscriptionSvc: subSvc,
 		OperationSvc:    opSvc,
 		InfraRepo:       infraRepo,
+		TicketSvc:       ticketSvc,
 	})
 
 	httpServer := &http.Server{

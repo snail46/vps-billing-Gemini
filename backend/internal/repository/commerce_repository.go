@@ -854,6 +854,123 @@ func (r *PostgresCommerceRepository) GetOrCreateWallet(ctx context.Context, user
 	return toDomainWallet(created), nil
 }
 
+func (r *PostgresCommerceRepository) DepositWalletTx(ctx context.Context, userID uuid.UUID, amountMinor int64, currency, description string) (*domainCommerce.Wallet, error) {
+	if currency == "" {
+		currency = "USD"
+	}
+	if description == "" {
+		description = "Wallet deposit"
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// 1. Get or create wallet with row lock
+	walletRow, err := qtx.GetWalletByUserIDForUpdate(ctx, GetWalletByUserIDForUpdateParams{
+		UserID:   toPgUUID(userID),
+		Currency: currency,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			newWalletID := uuid.New()
+			walletRow, err = qtx.CreateWallet(ctx, CreateWalletParams{
+				ID:                    toPgUUID(newWalletID),
+				UserID:                toPgUUID(userID),
+				Currency:              currency,
+				AvailableBalanceMinor: 0,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to create wallet for deposit: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to lock wallet: %w", err)
+		}
+	}
+
+	// 2. Create balanced Double-Entry Ledger Transaction & Entries
+	ledgerTxID := uuid.New()
+	refType := "wallet_deposit"
+	_, err = qtx.CreateLedgerTransaction(ctx, CreateLedgerTransactionParams{
+		ID:            toPgUUID(ledgerTxID),
+		Type:          "wallet_deposit",
+		ReferenceType: toPgText(refType),
+		ReferenceID:   walletRow.ID,
+		Description:   toPgText(description),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ledger transaction: %w", err)
+	}
+
+	// Debit: Gateway Account
+	_, err = qtx.CreateLedgerEntry(ctx, CreateLedgerEntryParams{
+		ID:            toPgUUID(uuid.New()),
+		TransactionID: toPgUUID(ledgerTxID),
+		AccountType:   string(domainCommerce.AccountPaymentGateway),
+		AccountID:     toPgUUID(domainCommerce.SystemAccountPaymentGateway),
+		Direction:     string(domainCommerce.DirectionDebit),
+		AmountMinor:   amountMinor,
+		Currency:      currency,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create debit ledger entry: %w", err)
+	}
+
+	// Credit: User Wallet Account
+	_, err = qtx.CreateLedgerEntry(ctx, CreateLedgerEntryParams{
+		ID:            toPgUUID(uuid.New()),
+		TransactionID: toPgUUID(ledgerTxID),
+		AccountType:   string(domainCommerce.AccountUserWallet),
+		AccountID:     toPgUUID(userID),
+		Direction:     string(domainCommerce.DirectionCredit),
+		AmountMinor:   amountMinor,
+		Currency:      currency,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create credit ledger entry: %w", err)
+	}
+
+	// 3. Update wallet balance
+	newBalance := walletRow.AvailableBalanceMinor + amountMinor
+	updatedWallet, err := qtx.UpdateWalletBalance(ctx, UpdateWalletBalanceParams{
+		UserID:                walletRow.UserID,
+		Currency:              walletRow.Currency,
+		AvailableBalanceMinor: newBalance,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update wallet balance: %w", err)
+	}
+
+	// 4. Create outbox event
+	outboxPayload, _ := json.Marshal(map[string]any{
+		"user_id":      userID.String(),
+		"amount_minor": amountMinor,
+		"currency":     currency,
+		"new_balance":  newBalance,
+		"deposited_at": time.Now().UTC().Format(time.RFC3339),
+	})
+	_, _ = qtx.CreateOutboxEvent(ctx, CreateOutboxEventParams{
+		ID:            toPgUUID(uuid.New()),
+		EventType:     "wallet.deposited.v1",
+		AggregateType: "wallet",
+		AggregateID:   walletRow.ID,
+		Payload:       outboxPayload,
+		Status:        "pending",
+		Attempts:      0,
+		NextAttemptAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+	})
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit deposit tx: %w", err)
+	}
+
+	return toDomainWallet(updatedWallet), nil
+}
+
 func (r *PostgresCommerceRepository) ListLedgerTransactions(ctx context.Context, limit, offset int) ([]*domainCommerce.LedgerTransaction, error) {
 	rows, err := r.queries.ListRecentLedgerTransactions(ctx, ListRecentLedgerTransactionsParams{
 		Limit:  int32(limit),

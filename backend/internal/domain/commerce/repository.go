@@ -65,6 +65,7 @@ type InvoiceRepository interface {
 
 type WalletRepository interface {
 	GetOrCreateWallet(ctx context.Context, userID uuid.UUID, currency string) (*Wallet, error)
+	DepositWalletTx(ctx context.Context, userID uuid.UUID, amountMinor int64, currency, description string) (*Wallet, error)
 	ListLedgerTransactions(ctx context.Context, limit, offset int) ([]*LedgerTransaction, error)
 	ListUserLedgerEntries(ctx context.Context, userID uuid.UUID) ([]*LedgerEntry, error)
 }

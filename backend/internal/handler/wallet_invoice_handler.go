@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -33,6 +34,44 @@ func (h *WalletInvoiceHandler) GetWallet(w http.ResponseWriter, r *http.Request)
 	}
 
 	wallet, err := h.walletSvc.GetUserWallet(r.Context(), userID, currency)
+	if err != nil {
+		httputil.Error(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "errors.internal_error", err.Error())
+		return
+	}
+
+	httputil.JSON(w, r, http.StatusOK, map[string]any{
+		"wallet": wallet,
+	})
+}
+
+type DepositRequest struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+}
+
+func (h *WalletInvoiceHandler) Deposit(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	if userID == uuid.Nil {
+		httputil.Error(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "errors.unauthorized", "user authentication required")
+		return
+	}
+
+	var req DepositRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.Error(w, r, http.StatusBadRequest, "INVALID_REQUEST", "errors.validation_failed", err.Error())
+		return
+	}
+
+	if req.AmountMinor <= 0 {
+		httputil.Error(w, r, http.StatusBadRequest, "INVALID_AMOUNT", "errors.validation_failed", "amount must be greater than zero")
+		return
+	}
+
+	if req.Currency == "" {
+		req.Currency = "USD"
+	}
+
+	wallet, err := h.walletSvc.Deposit(r.Context(), userID, req.AmountMinor, req.Currency)
 	if err != nil {
 		httputil.Error(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "errors.internal_error", err.Error())
 		return

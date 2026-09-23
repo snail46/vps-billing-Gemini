@@ -28,8 +28,22 @@
     "apiReady": "System Ready",
     "database": "PostgreSQL Database",
     "redis": "Redis & Queue",
-    "worker": "Background Worker"
+    "worker": "Background Worker",
+    "sshConnection": "SSH Connection",
+    "rootPassword": "Root Password",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "trafficUsage": "Monthly Traffic Usage",
+    "renew": "Renew Server",
+    "createNode": "Add New Node",
+    "createProvider": "Add Provider",
+    "createProduct": "Add Product",
+    "createPlan": "Add Plan",
+    "setup2fa": "Configure 2FA",
+    "operationInspector": "Operation Inspector",
+    "rawDiagnostic": "Raw Diagnostics"
   },
+
   "auth": {
     "login": "Sign In",
     "register": "Create Account",
@@ -130,8 +144,13 @@
     "adminLedger": "Double-Entry Ledger",
     "ledgerTransaction": "Ledger Transaction",
     "debit": "Debit",
-    "credit": "Credit"
+    "credit": "Credit",
+    "deposit": "Top Up Balance",
+    "depositTitle": "Top Up Wallet Balance",
+    "depositAmount": "Amount ($)",
+    "depositSuccess": "Balance credited successfully!"
   },
+
   "order": {
     "status": {
       "pending": "Pending Payment",
@@ -189,8 +208,14 @@
     "priority": "Priority",
     "submit": "Submit Ticket",
     "open": "Open",
-    "closed": "Closed"
+    "closed": "Closed",
+    "reply": "Reply",
+    "replyPlaceholder": "Enter your response...",
+    "sendReply": "Send Reply",
+    "closeTicket": "Close Ticket",
+    "reopenTicket": "Reopen Ticket"
   },
+
   "errors": {
     "internal_error": "An unexpected internal error occurred",
     "not_found": "Requested resource not found",
