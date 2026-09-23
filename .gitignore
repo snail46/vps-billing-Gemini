@@ -1,0 +1,68 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage
+*.out
+*.test
+coverage/
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Environment variables
+.env
+!.env.example
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ========================================
+# Agent Starter Pack / Engineering Specs
+# (These are the original design documents
+#  used to guide AI code generation.
+#  They are NOT part of the V1 project.)
+# ========================================
+AGENTS.md
+MASTER_PROMPT.md
+ANTIGRAVITY_V1_AUTOPILOT.md
+PROMPT_TO_AGENT.txt
+MANIFEST.txt
+TASKS.md
+
+# Engineering specification docs (01-PRD through 20-AI-RULES, etc.)
+docs/01-PRD.md
+docs/02-ARCHITECTURE.md
+docs/03-DOMAIN-MODEL.md
+docs/04-DATABASE-SCHEMA.md
+docs/05-STATE-MACHINES.md
+docs/06-PROVIDER-CONTRACT.md
+docs/07-WORKFLOW-SPEC.md
+docs/08-API-CONTRACT.md
+docs/09-EVENT-CONTRACT.md
+docs/10-USER-UX.md
+docs/11-ADMIN-UX.md
+docs/12-DESIGN-SYSTEM.md
+docs/13-I18N-SPEC.md
+docs/14-SECURITY.md
+docs/15-RBAC.md
+docs/16-OBSERVABILITY.md
+docs/17-DEPLOYMENT.md
+docs/18-TEST-PLAN.md
+docs/19-ACCEPTANCE-CRITERIA.md
+docs/20-AI-IMPLEMENTATION-RULES.md
+docs/SOURCE-REFERENCES.md
+docs/adr/ADR-000-template.md
+docs/schemas/

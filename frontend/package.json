@@ -1,0 +1,16 @@
+{
+  "name": "vps-billing-frontend-root",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "user-web",
+    "admin-web"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck -w @vps-billing/shared -w @vps-billing/user-web -w @vps-billing/admin-web",
+    "build": "npm run build -w @vps-billing/shared -w @vps-billing/user-web -w @vps-billing/admin-web"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2"
+  }
+}

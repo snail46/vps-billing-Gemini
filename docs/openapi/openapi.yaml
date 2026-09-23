@@ -1,0 +1,297 @@
+openapi: 3.1.0
+info:
+  title: VPS Billing Platform API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /health/live:
+    get:
+      operationId: healthLive
+      responses:
+        "200": {description: Alive}
+  /health/ready:
+    get:
+      operationId: healthReady
+      responses:
+        "200": {description: Ready}
+        "503": {description: Not ready}
+  /auth/register:
+    post:
+      operationId: register
+      responses:
+        "201": {description: Registered}
+  /auth/login:
+    post:
+      operationId: login
+      responses:
+        "200": {description: Logged in}
+        "401": {description: Invalid credentials}
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        "200": {description: Current user}
+  /products:
+    get:
+      operationId: listProducts
+      responses:
+        "200": {description: Products}
+  /orders:
+    get:
+      operationId: listOrders
+      responses:
+        "200": {description: Orders}
+    post:
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, quantity]
+              properties:
+                plan_id: {type: string, format: uuid}
+                quantity: {type: integer, minimum: 1}
+      responses:
+        "201": {description: Created}
+        "422": {description: Validation failure}
+  /instances:
+    get:
+      operationId: listInstances
+      responses:
+        "200": {description: Instances}
+  /instances/{id}:
+    get:
+      operationId: getInstance
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": {description: Instance}
+        "404": {description: Not found}
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Metrics in Prometheus format
+  /auth/logout:
+    post:
+      operationId: logout
+      responses:
+        "200": {description: Logged out}
+  /admin/auth/login:
+    post:
+      operationId: adminLogin
+      responses:
+        "200": {description: Admin logged in}
+        "401": {description: Invalid credentials or 2FA code}
+  /admin/auth/logout:
+    post:
+      operationId: adminLogout
+      responses:
+        "200": {description: Admin logged out}
+  /admin/auth/me:
+    get:
+      operationId: getAdminMe
+      responses:
+        "200": {description: Admin profile and permissions}
+  /admin/auth/2fa/setup:
+    get:
+      operationId: setupAdmin2FA
+      responses:
+        "200": {description: TOTP secret}
+  /admin/auth/2fa/enable:
+    post:
+      operationId: enableAdmin2FA
+      responses:
+        "200": {description: 2FA enabled}
+  /admin/auth/2fa/disable:
+    post:
+      operationId: disableAdmin2FA
+      responses:
+        "200": {description: 2FA disabled}
+  /admin/nodes:
+    get:
+      operationId: adminListNodes
+      responses:
+        "200": {description: Nodes}
+  /admin/providers:
+    get:
+      operationId: adminListProviders
+      responses:
+        "200": {description: Providers}
+  /admin/ip-pools:
+    get:
+      operationId: adminListIpPools
+      responses:
+        "200": {description: IP pools}
+  /admin/instances:
+    get:
+      operationId: adminListInstances
+      responses:
+        "200": {description: Instances}
+  /admin/orders:
+    get:
+      operationId: adminListOrders
+      responses:
+        "200": {description: Orders}
+  /admin/subscriptions:
+    get:
+      operationId: adminListSubscriptions
+      responses:
+        "200": {description: Subscriptions}
+  /admin/operations:
+    get:
+      operationId: adminListOperations
+      responses:
+        "200": {description: Operations}
+  /admin/audit-logs:
+    get:
+      operationId: adminListAuditLogs
+      responses:
+        "200": {description: Audit logs}
+  /admin/reconcile/run:
+    post:
+      operationId: triggerReconciliation
+      responses:
+        "200": {description: Reconcile cycle triggered}
+  /invoices:
+    get:
+      operationId: listInvoices
+      responses:
+        "200": {description: Invoices}
+  /subscriptions:
+    get:
+      operationId: listSubscriptions
+      responses:
+        "200": {description: Subscriptions}
+  /instances/{id}/start:
+    post:
+      operationId: startInstance
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationAccepted"}
+        "409": {description: Conflict}
+  /instances/{id}/stop:
+    post:
+      operationId: stopInstance
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationAccepted"}
+        "409": {description: Conflict}
+  /instances/{id}/reset-password:
+    post:
+      operationId: resetInstancePassword
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationAccepted"}
+        "409": {description: Conflict}
+  /instances/{id}/restart:
+    post:
+      operationId: restartInstance
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationAccepted"}
+        "409": {description: Conflict}
+  /instances/{id}/reinstall:
+    post:
+      operationId: reinstallInstance
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [image_id]
+              properties:
+                image_id: {type: string}
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationAccepted"}
+  /operations/{id}:
+    get:
+      operationId: getOperation
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Operation
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OperationResponse"}
+  /events:
+    get:
+      operationId: streamEvents
+      responses:
+        "200":
+          description: SSE
+          content:
+            text/event-stream:
+              schema: {type: string}
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  schemas:
+    OperationAccepted:
+      type: object
+      required: [success, data, request_id]
+      properties:
+        success: {type: boolean, const: true}
+        request_id: {type: string}
+        data:
+          type: object
+          required: [operation_id, status]
+          properties:
+            operation_id: {type: string, format: uuid}
+            status: {type: string, enum: [queued]}
+    OperationResponse:
+      type: object
+      required: [success, data, request_id]
+      properties:
+        success: {type: boolean, const: true}
+        request_id: {type: string}
+        data:
+          type: object
+          required: [id, status, progress]
+          properties:
+            id: {type: string, format: uuid}
+            status:
+              type: string
+              enum: [queued, running, waiting_provider, waiting_resource, verifying, retrying, succeeded, failed, cancelled]
+            phase: {type: [string, "null"]}
+            progress: {type: integer, minimum: 0, maximum: 100}
+            message_key: {type: [string, "null"]}
+            retryable: {type: boolean}
+            error_code: {type: [string, "null"]}

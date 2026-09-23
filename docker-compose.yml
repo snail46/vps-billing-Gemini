@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vps_billing}
+      POSTGRES_USER: ${POSTGRES_USER:-vps_billing}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vps_billing} -d ${POSTGRES_DB:-vps_billing}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      HTTP_PORT: 8080
+      USER_WEB_ORIGIN: ${USER_WEB_ORIGIN:-http://localhost:3000}
+      ADMIN_WEB_ORIGIN: ${ADMIN_WEB_ORIGIN:-http://localhost:3001}
+      DATABASE_URL: postgres://${POSTGRES_USER:-vps_billing}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-vps_billing}?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-long-random}
+      CSRF_SECRET: ${CSRF_SECRET:-change-me-long-random}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      AUTO_MIGRATE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["/app/worker"]
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgres://${POSTGRES_USER:-vps_billing}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-vps_billing}?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  user-web:
+    build:
+      context: .
+      dockerfile: frontend/user-web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: frontend/admin-web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
+  redis_data:
