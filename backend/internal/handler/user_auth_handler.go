@@ -97,7 +97,7 @@ func (h *UserAuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Set HttpOnly session cookie and CSRF cookie
 	h.sessMgr.SetSessionCookie(w, session.UserSessionCookieName, sess.Token, session.UserSessionTTL)
-	h.sessMgr.SetCSRFCookie(w, sess.CSRFToken, session.UserSessionTTL)
+	h.sessMgr.SetActorCSRFCookie(w, session.UserCSRFCookieName, sess.CSRFToken, session.UserSessionTTL)
 
 	httputil.JSON(w, r, http.StatusOK, map[string]any{
 		"user": map[string]any{
@@ -119,7 +119,7 @@ func (h *UserAuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.sessMgr.ClearSessionCookie(w, session.UserSessionCookieName)
-	h.sessMgr.ClearCSRFCookie(w)
+	h.sessMgr.ClearActorCSRFCookie(w, session.UserCSRFCookieName)
 
 	httputil.JSON(w, r, http.StatusOK, map[string]any{
 		"logged_out": true,
@@ -128,12 +128,13 @@ func (h *UserAuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserAuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetContextUser(r.Context())
+	sess := middleware.GetContextSession(r.Context())
 	if user == nil {
 		httputil.Error(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "errors.unauthorized", "unauthenticated")
 		return
 	}
 
-	httputil.JSON(w, r, http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"user": map[string]any{
 			"id":                user.ID,
 			"email":             user.Email,
@@ -144,5 +145,13 @@ func (h *UserAuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 			"last_login_at":     user.LastLoginAt,
 			"created_at":        user.CreatedAt,
 		},
-	})
+	}
+
+	if sess != nil {
+		h.sessMgr.SetActorCSRFCookie(w, session.UserCSRFCookieName, sess.CSRFToken, session.UserSessionTTL)
+		resp["token"] = sess.Token
+		resp["csrf_token"] = sess.CSRFToken
+	}
+
+	httputil.JSON(w, r, http.StatusOK, resp)
 }

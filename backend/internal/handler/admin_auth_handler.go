@@ -77,7 +77,7 @@ func (h *AdminAuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Set HttpOnly session cookie and CSRF cookie
 	h.sessMgr.SetSessionCookie(w, session.AdminSessionCookieName, sess.Token, session.AdminSessionTTL)
-	h.sessMgr.SetCSRFCookie(w, sess.CSRFToken, session.AdminSessionTTL)
+	h.sessMgr.SetActorCSRFCookie(w, session.AdminCSRFCookieName, sess.CSRFToken, session.AdminSessionTTL)
 
 	httputil.JSON(w, r, http.StatusOK, map[string]any{
 		"admin": map[string]any{
@@ -101,7 +101,7 @@ func (h *AdminAuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.sessMgr.ClearSessionCookie(w, session.AdminSessionCookieName)
-	h.sessMgr.ClearCSRFCookie(w)
+	h.sessMgr.ClearActorCSRFCookie(w, session.AdminCSRFCookieName)
 
 	httputil.JSON(w, r, http.StatusOK, map[string]any{
 		"logged_out": true,
@@ -116,6 +116,9 @@ func (h *AdminAuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Refresh CSRF cookie for the active admin session
+	h.sessMgr.SetActorCSRFCookie(w, session.AdminCSRFCookieName, sess.CSRFToken, session.AdminSessionTTL)
+
 	httputil.JSON(w, r, http.StatusOK, map[string]any{
 		"admin": map[string]any{
 			"id":                 admin.ID,
@@ -128,6 +131,8 @@ func (h *AdminAuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		},
 		"roles":       sess.Roles,
 		"permissions": sess.Permissions,
+		"token":       sess.Token,
+		"csrf_token":  sess.CSRFToken,
 	})
 }
 

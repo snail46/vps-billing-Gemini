@@ -126,6 +126,16 @@ export const App: React.FC = () => {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const formatActionError = (err: any): string => {
+    if (!err) return t("errors.internal_error");
+    const raw = err?.message || String(err);
+    if (raw.startsWith("errors.")) {
+      const translated = t(raw);
+      if (translated !== raw) return translated;
+    }
+    return t(raw);
+  };
+
   useEffect(() => {
     checkMe();
   }, []);
@@ -270,7 +280,7 @@ export const App: React.FC = () => {
       setActionNotice(t("admin.nodeSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setLoadingData(false);
     }
@@ -294,7 +304,7 @@ export const App: React.FC = () => {
       setActionNotice(t("admin.provSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setLoadingData(false);
     }
@@ -314,7 +324,7 @@ export const App: React.FC = () => {
       setProviderTestResult({
         success: false,
         latency_ms: 0,
-        message: err?.message || t("errors.internal_error"),
+        message: formatActionError(err),
       });
     } finally {
       setTestingProvider(false);
@@ -329,7 +339,7 @@ export const App: React.FC = () => {
       const res = await adminApi.pingNode(node.id);
       setActionNotice(`${node.name}: ${t("admin.nodePingSuccess")} ${res.latency_ms}ms (${res.message})`);
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setPingingNodeId(null);
     }
@@ -350,7 +360,7 @@ export const App: React.FC = () => {
       setActionNotice(t("admin.productSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setLoadingData(false);
     }
@@ -378,7 +388,7 @@ export const App: React.FC = () => {
       setActionNotice(t("admin.planSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setLoadingData(false);
     }
@@ -395,7 +405,7 @@ export const App: React.FC = () => {
       setSelectedTicket(fresh);
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setLoadingData(false);
     }
@@ -411,7 +421,7 @@ export const App: React.FC = () => {
       setSelectedTicket(fresh);
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setLoadingData(false);
     }
@@ -425,7 +435,7 @@ export const App: React.FC = () => {
       setTwoFASecret(res.secret);
       setTwoFAUrl(res.otpauth_url);
     } catch (err: any) {
-      setTwoFAMsg(err?.message || t("errors.internal_error"));
+      setTwoFAMsg(formatActionError(err));
     }
   };
 
@@ -449,7 +459,7 @@ export const App: React.FC = () => {
       setActionNotice(t("admin.reconcileSuccess"));
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setReconciling(false);
     }
@@ -476,7 +486,7 @@ export const App: React.FC = () => {
       setAdjustAmount("10.00");
       await loadTabData();
     } catch (err: any) {
-      setActionError(err?.message || t("errors.internal_error"));
+      setActionError(formatActionError(err));
     } finally {
       setAdjustingBalance(false);
     }
@@ -620,6 +630,8 @@ export const App: React.FC = () => {
                 onClick={() => {
                   setActiveTab(tab.id as AdminTab);
                   setSelectedTicket(null);
+                  setActionNotice(null);
+                  setActionError(null);
                 }}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
                   activeTab === tab.id
@@ -638,12 +650,16 @@ export const App: React.FC = () => {
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full">
         {actionNotice && (
           <div className="mb-4">
-            <Alert severity="success">{actionNotice}</Alert>
+            <Alert severity="success" onClose={() => setActionNotice(null)}>
+              {actionNotice}
+            </Alert>
           </div>
         )}
         {actionError && (
           <div className="mb-4">
-            <Alert severity="error">{actionError}</Alert>
+            <Alert severity="error" onClose={() => setActionError(null)}>
+              {actionError}
+            </Alert>
           </div>
         )}
 
@@ -892,7 +908,7 @@ export const App: React.FC = () => {
                             }).then((res) => {
                               setActionNotice(`${p.name}: ${res.message} (${res.latency_ms}ms)`);
                             }).catch((err) => {
-                              setActionError(`${p.name}: ${err?.message}`);
+                              setActionError(`${p.name}: ${formatActionError(err)}`);
                             });
                           }}
                         >

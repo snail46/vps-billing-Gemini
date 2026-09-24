@@ -76,7 +76,7 @@ export const authApi = {
     });
     if (res.success && res.data) {
       if (res.data.token) setAuthToken(res.data.token);
-      if (res.data.csrf_token) setCSRFToken(res.data.csrf_token);
+      if (res.data.csrf_token) setCSRFToken(res.data.csrf_token, "user");
     }
     return res;
   },
@@ -88,12 +88,19 @@ export const authApi = {
       });
     } finally {
       setAuthToken(null);
-      setCSRFToken(null);
+      setCSRFToken(null, "user");
     }
   },
 
-  getMeUser: (): Promise<ApiResponse<UserMeResponse>> =>
-    apiFetch("/api/v1/auth/me"),
+  getMeUser: async (): Promise<ApiResponse<UserMeResponse>> => {
+    const res = await apiFetch<UserMeResponse>("/api/v1/auth/me");
+    if (res.success && res.data) {
+      const data = res.data as any;
+      if (data.token) setAuthToken(data.token);
+      if (data.csrf_token) setCSRFToken(data.csrf_token, "user");
+    }
+    return res;
+  },
 
   // Admin Auth
   loginAdmin: async (data: { email: string; password: string }): Promise<ApiResponse<AuthLoginResponse>> => {
@@ -103,7 +110,7 @@ export const authApi = {
     });
     if (res.success && res.data) {
       if (res.data.token) setAuthToken(res.data.token);
-      if (res.data.csrf_token) setCSRFToken(res.data.csrf_token);
+      if (res.data.csrf_token) setCSRFToken(res.data.csrf_token, "admin");
     }
     return res;
   },
@@ -115,12 +122,19 @@ export const authApi = {
       });
     } finally {
       setAuthToken(null);
-      setCSRFToken(null);
+      setCSRFToken(null, "admin");
     }
   },
 
-  getMeAdmin: (): Promise<ApiResponse<AdminMeResponse>> =>
-    apiFetch("/api/v1/admin/auth/me"),
+  getMeAdmin: async (): Promise<ApiResponse<AdminMeResponse>> => {
+    const res = await apiFetch<AdminMeResponse>("/api/v1/admin/auth/me");
+    if (res.success && res.data) {
+      const data = res.data as any;
+      if (data.token) setAuthToken(data.token);
+      if (data.csrf_token) setCSRFToken(data.csrf_token, "admin");
+    }
+    return res;
+  },
 
   // Admin Audit
   listAudit: (limit = 20, offset = 0): Promise<ApiResponse<AuditListResponse>> =>

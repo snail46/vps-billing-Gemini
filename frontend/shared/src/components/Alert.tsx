@@ -6,6 +6,7 @@ interface AlertProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  onClose?: () => void;
 }
 
 const alertStyles: Record<StatusSeverity, { container: string; title: string }> = {
@@ -31,13 +32,27 @@ const alertStyles: Record<StatusSeverity, { container: string; title: string }> 
   },
 };
 
-export const Alert: React.FC<AlertProps> = ({ severity, title, children, className = "" }) => {
+export const Alert: React.FC<AlertProps> = ({ severity, title, children, className = "", onClose }) => {
   const style = alertStyles[severity] || alertStyles.info;
 
   return (
     <div className={`p-4 rounded-lg border text-sm ${style.container} ${className}`} role="alert">
-      {title && <div className={`mb-1 ${style.title}`}>{title}</div>}
-      <div>{children}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          {title && <div className={`mb-1 ${style.title}`}>{title}</div>}
+          <div>{children}</div>
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 p-0.5 rounded cursor-pointer transition-colors leading-none"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        )}
+      </div>
     </div>
   );
 };

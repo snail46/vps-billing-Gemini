@@ -19,6 +19,8 @@ const (
 	UserSessionCookieName  = "vps_user_session"
 	AdminSessionCookieName = "vps_admin_session"
 	CSRFCookieName         = "vps_csrf_token"
+	UserCSRFCookieName     = "vps_csrf_token_user"
+	AdminCSRFCookieName    = "vps_csrf_token_admin"
 
 	UserSessionTTL  = 7 * 24 * time.Hour
 	AdminSessionTTL = 24 * time.Hour
@@ -254,6 +256,21 @@ func (m *Manager) SetCSRFCookie(w http.ResponseWriter, csrfToken string, ttl tim
 	})
 }
 
+func (m *Manager) SetActorCSRFCookie(w http.ResponseWriter, cookieName string, csrfToken string, ttl time.Duration) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName,
+		Value:    csrfToken,
+		Path:     "/",
+		Expires:  time.Now().Add(ttl),
+		MaxAge:   int(ttl.Seconds()),
+		HttpOnly: false,
+		Secure:   m.isSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
+	// Also set the general CSRFCookieName for backward compatibility with tests/clients
+	m.SetCSRFCookie(w, csrfToken, ttl)
+}
+
 func (m *Manager) ClearCSRFCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     CSRFCookieName,
@@ -265,4 +282,18 @@ func (m *Manager) ClearCSRFCookie(w http.ResponseWriter) {
 		Secure:   m.isSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+func (m *Manager) ClearActorCSRFCookie(w http.ResponseWriter, cookieName string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieName,
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		HttpOnly: false,
+		Secure:   m.isSecure,
+		SameSite: http.SameSiteLaxMode,
+	})
+	m.ClearCSRFCookie(w)
 }
